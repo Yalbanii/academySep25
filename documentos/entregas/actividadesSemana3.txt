@@ -5,5 +5,11 @@ Demo01: Producer–Consumer using wait, notify, synchronized & join
 Demo02: Collection Concurrent: BlockingQueue
 Demo03: Imprimir nones y pares, un hilo imprime los nones y otro hilo imprime para los pares. (wait, notify & synchronized)
 
+2. BackEnd Spring Boot, Spring Data Mongo, MongoDB, @Service, consumido por MCP.
+
+3. App Registro Inteligente de Estacionamientos. SringBoot, SpringRest, OpenAPI(Swagger), @Service, Spring Data JPA, Mysql & manejo de eventos para la comunicación entre los módulos.
+
+
+
 
 
