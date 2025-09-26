@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aventuras de los Threads en el Parque de Diversiones</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Comic Sans MS', 'Arial', sans-serif;
+            background: linear-gradient(to bottom, #87CEEB, #98FB98);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .story-selector {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .story-btn {
+            padding: 12px 25px;
+            background: #FFD700;
+            border: 3px solid #FFA500;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .story-btn:hover {
+            transform: scale(1.1) rotate(2deg);
+            background: #FFA500;
+        }
+        
+        .story-btn.active {
+            background: #FF6B6B;
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        .story-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: none;
+        }
+        
+        .story-card.active {
+            display: block;
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .story-title {
+            color: #e74c3c;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .analogy-box {
+            background: #FFF9E6;
+            border: 3px dashed #FFD700;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .character {
+            display: inline-block;
+            font-size: 3em;
+            margin: 0 10px;
+            animation: wiggle 2s infinite;
+        }
+        
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-5deg); }
+            75% { transform: rotate(5deg); }
+        }
+        
+        .playground {
+            background: #E8F5E9;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 200px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ride {
+            background: #2196F3;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px;
+            text-align: center;
+            position: relative;
+            display: inline-block;
+            min-width: 150px;
+        }
+        
+        .ride.occupied {
+            background: #f44336;
+        }
+        
+        .ride.waiting {
+            background: #FF9800;
+        }
+        
+        .ride.available {
+            background: #4CAF50;
+        }
+        
+        .kid {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            background: #FFD700;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 60px;
+            font-size: 2em;
+            margin: 10px;
+            position: relative;
+            transition: all 0.5s;
+        }
+        
+        .kid.sleeping {
+            background: #9E9E9E;
+            animation: snore 2s infinite;
+        }
+        
+        @keyframes snore {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .kid.waiting {
+            background: #FF9800;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .kid.playing {
+            background: #4CAF50;
+            animation: jump 1s infinite;
+        }
+        
+        @keyframes jump {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .bathroom {
+            display: inline-block;
+            background: #81C784;
+            border: 3px solid #4CAF50;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px;
+            min-width: 200px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .key {
+            display: inline-block;
+            font-size: 2em;
+            color: #FFD700;
+            animation: swing 2s infinite;
+        }
+        
+        @keyframes swing {
+            0%, 100% { transform: rotate(-10deg); }
+            50% { transform: rotate(10deg); }
+        }
+        
+        .door {
+            width: 100px;
+            height: 150px;
+            background: #8B4513;
+            border: 3px solid #654321;
+            border-radius: 10px;
+            margin: 20px auto;
+            position: relative;
+            transition: all 0.5s;
+        }
+        
+        .door.open {
+            transform: rotateY(60deg);
+            background: #A0522D;
+        }
+        
+        .door.locked {
+            background: #d32f2f;
+        }
+        
+        .explanation {
+            background: #E3F2FD;
+            border-left: 5px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        
+        .code-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .code-box {
+            background: #f5f5f5;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .code-box h4 {
+            color: #e74c3c;
+            margin-bottom: 10px;
+        }
+        
+        .message-box {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 1.2em;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .interactive-btn {
+            padding: 15px 30px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        
+        .interactive-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        
+        .waiting-line {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: #FFF3E0;
+            border-radius: 15px;
+        }
+        
+        .arrow {
+            font-size: 2em;
+            margin: 0 10px;
+            color: #FF6B6B;
+            animation: point 1s infinite;
+        }
+        
+        @keyframes point {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(10px); }
+        }
+        
+        .moral {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 1.1em;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .speech-bubble {
+            background: white;
+            border: 2px solid #333;
+            border-radius: 20px;
+            padding: 15px;
+            position: relative;
+            margin: 20px 0;
+            font-size: 1.1em;
+        }
+        
+        .speech-bubble:before {
+            content: "";
+            position: absolute;
+            bottom: -20px;
+            left: 50px;
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 20px solid white;
+        }
+        
+        .timer {
+            display: inline-block;
+            background: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1.2em;
+            margin: 10px;
+            animation: tick 1s infinite;
+        }
+        
+        @keyframes tick {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎠 Los Threads de Java son como Niños en el Parque 🎡</h1>
+        
+        <div class="story-selector">
+            <button class="story-btn active" onclick="showStory('v0')">Historia 1: La Siesta</button>
+            <button class="story-btn" onclick="showStory('v1')">Historia 2: El Baño Sin Llave</button>
+            <button class="story-btn" onclick="showStory('v2')">Historia 3: El Baño con Llave</button>
+            <button class="story-btn" onclick="showStory('v3')">Historia 4: La Llave Especial</button>
+            <button class="story-btn" onclick="showStory('v4')">Historia 5: Muchos Niños</button>
+            <button class="story-btn" onclick="showStory('v5')">Historia 6: La Campana</button>
+            <button class="story-btn" onclick="showStory('v6')">Historia 7: Dormir vs Esperar</button>
+            <button class="story-btn" onclick="showStory('final')">La Gran Lección</button>
+        </div>
+        
+        <!-- Historia V0: Thread.sleep() -->
+        <div class="story-card active" id="v0">
+            <h2 class="story-title">📖 Historia 1: Pedrito Toma una Siesta</h2>
+            
+            <div class="analogy-box">
+                <h3>🎪 En el Parque de Diversiones...</h3>
+                <p style="font-size: 1.2em; line-height: 1.6;">
+                    Pedrito <span class="character">👦</span> está jugando en el columpio. 
+                    De repente, le da sueño y decide tomar una siesta de 5 segundos.
+                </p>
+            </div>
+            
+            <div class="playground">
+                <h3>Lo que pasa con Thread.sleep():</h3>
+                <div class="ride available">
+                    <div>🎠 Columpio</div>
+                    <div class="kid sleeping" id="pedrito">😴</div>
+                </div>
+                <div class="timer">⏰ 5 segundos...</div>
+                
+                <div class="speech-bubble">
+                    <strong>Pedrito dice:</strong> "Voy a dormir 5 segundos... 
+                    ¡PERO NO SUELTO EL COLUMPIO! Nadie más puede usarlo mientras duermo."
+                </div>
+            </div>
+            
+            <div class="code-comparison">
+                <div class="code-box">
+                    <h4>En Java (V0):</h4>
+                    <pre>Thread.sleep(5000);</pre>
+                    <p>// El thread duerme pero NO suelta recursos</p>
+                </div>
+                <div class="code-box">
+                    <h4>En el Parque:</h4>
+                    <p>😴 Pedrito duerme EN el columpio</p>
+                    <p>🚫 Nadie más puede usarlo</p>
+                    <p>⏰ Todos esperan 5 segundos</p>
+                </div>
+            </div>
+            
+            <div class="message-box">
+                💡 <strong>¿Qué aprendimos?</strong><br>
+                Thread.sleep() es como dormirse SIN soltar lo que tienes en las manos.
+                ¡Es egoísta con los juguetes!
+            </div>
+        </div>
+        
+        <!-- Historia V1: wait() sin sincronización -->
+        <div class="story-card" id="v1">
+            <h2 class="story-title">📖 Historia 2: El Baño Sin Llave (¡ERROR!)</h2>
+            
+            <div class="analogy-box">
+                <h3>🚽 María Necesita el Baño...</h3>
+                <p style="font-size: 1.2em; line-height: 1.6;">
+                    María <span class="character">👧</span> quiere usar el baño del parque, 
+                    pero intenta entrar SIN pedir la llave primero.
+                </p>
+            </div>
+            
+            <div class="playground" style="background: #FFEBEE;">
+                <h3>¡PROBLEMA! 🚨</h3>
+                <div class="bathroom">
+                    <div class="door locked"></div>
+                    <div>🚽 Baño</div>
+                </div>
+                <div class="kid" style="background: #f44336;">😱</div>
+                <div class="speech-bubble" style="border-color: red;">
+                    <strong>El guardia dice:</strong> "¡ALTO! ¡No puedes esperar adentro sin tener la llave primero!"
+                    <br><br>
+                    <span style="color: red;">IllegalMonitorStateException!</span>
+                </div>
+            </div>
+            
+            <div class="code-comparison">
+                <div class="code-box">
+                    <h4>En Java (V1) - MAL ❌:</h4>
+                    <pre>wait(5000); // Sin synchronized</pre>
+                    <p style="color: red;">// ¡ERROR! No tienes el monitor</p>
+                </div>
+                <div class="code-box">
+                    <h4>En el Parque:</h4>
+                    <p>🚫 María intenta esperar sin llave</p>
+                    <p>👮 El guardia no la deja</p>
+                    <p>📝 Regla: ¡Necesitas la llave primero!</p>
+                </div>
+            </div>
+            
+            <div class="message-box" style="background: linear-gradient(45deg, #f44336, #FF5722);">
+                ⚠️ <strong>LECCIÓN IMPORTANTE:</strong><br>
+                wait() SIEMPRE necesita tener la "llave" (synchronized) primero.
+                ¡No puedes esperar en un lugar sin permiso!
+            </div>
+        </div>
+        
+        <!-- Historia V2: synchronized + wait() -->
+        <div class="story-card" id="v2">
+            <h2 class="story-title">📖 Historia 3: El Baño con Llave Mágica</h2>
+            
+            <div class="analogy-box">
+                <h3>🗝️ La Forma Correcta...</h3>
+                <p style="font-size: 1.2em; line-height: 1.6;">
+                    María <span class="character">👧</span> ahora pide la llave mágica del baño.
+                    Esta llave es especial: cuando María decide esperar, 
+                    ¡la llave vuela sola de vuelta al gancho para que otros la usen!
+                </p>
+            </div>
+            
+            <div class="playground">
+                <h3>Con synchronized + wait():</h3>
+                <div class="waiting-line">
+                    <div class="kid playing">👧</div>
+                    <span class="arrow">→</span>
+                    <span class="key">🗝️</span>
+                    <span class="arrow">→</span>
+                    <div class="bathroom">
+                        <div class="door open"></div>
+                        <div>🚽 Libre</div>
+                    </div>
+                </div>
+                
+                <div class="speech-bubble">
+                    <strong>María dice:</strong> "Tengo la llave, entro al baño... 
+                    pero voy a esperar 5 segundos. ¡La llave mágica vuelve sola al gancho 
+                    para que otros niños puedan usar el baño mientras espero!"
+                </div>
+            </div>
+            
+            <div class="code-comparison">
+                <div class="code-box">
+                    <h4>En Java (V2) - BIEN ✅:</h4>
+                    <pre>synchronized void dormir() {
+    wait(5000); // Con synchronized
+}</pre>
+                </div>
+                <div class="code-box">
+                    <h4>En el Parque:</h4>
+                    <p>✅ María pide la llave primero</p>
+                    <p>🗝️ Entra al baño con permiso</p>
+                    <p>✨ Al esperar, la llave vuelve mágicamente</p>
+                    <p>🎉 Otros pueden usar el baño</p>
+                </div>
+            </div>
+            
+            <div class="message-box">
+                💚 <strong>¡Perfecto!</strong><br>
+                wait() con synchronized es como tener una llave mágica que se comparte 
+                automáticamente cuando decides esperar. ¡Todos contentos!
+            </div>
+        </div>
+        
+        <!-- Historia V3: Monitor externo -->
+        <div class="story-card" id="v3">
+            <h2 class="story-title">📖 Historia 4: La Llave del Tobogán Gigante</h2>
+            
+            <div class="analogy-box">
+                <h3>🎢 Una Llave Especial...</h3>
+                <p style="font-size: 1.2em; line-height: 1.6;">
+                    Juan <span class="character">👦</span> no usa la llave del baño.
+                    ¡Usa la llave especial del Tobogán Gigante! Esta llave controla
+                    quién puede subir al tobogán más divertido del parque.
+                </p>
+            </div>
+            
+            <div class="playground">
+                <h3>Monitor Externo (otro objeto):</h3>
+                <div style="text-align: center;">
+                    <div class="ride available" style="background: #9C27B0;">
+                        <div>🎢 Tobogán Gigante</div>
+                        <span class="key">🗝️</span>
+                    </div>
+                    <div class="waiting-line">
+                        <div class="kid waiting">👦</div>
+                        <div class="kid waiting">👧</div>
+                        <div class="kid waiting">👶</div>
+                    </div>
+                </div>
+                
+                <div class="speech-bubble">
+                    <strong>Juan dice:</strong> "Uso la llave del Tobogán Gigante 
+                    (no la del baño). Cuando espero, esta llave se libera 
+                    y otro niño puede subir al tobogán."
+                </div>
+            </div>
+            
+            <div class="code-comparison">
+                <div class="code-box">
+                    <h4>En Java (V3):</h4>
+                    <pre>synchronized (obj) {
+    obj.wait(5000);
+}</pre>
+                    <p>// Usa el monitor de 'obj'</p>
+                </div>
+                <div class="code-box">
+                    <h4>En el Parque:</h4>
+                    <p>🎢 Llave del Tobogán (no del baño)</p>
+                    <p>👦 Juan la usa para coordinarse</p>
+                    <p>🔄 Todos esperan turnos del tobogán</p>
+                </div>
+            </div>
+            
+            <div class="message-box">
+                🎯 <strong>Dato Curioso:</strong><br>
+                Puedes usar la llave de CUALQUIER juego del parque para organizarte.
+                ¡No siempre tiene que ser la del baño!
+            </div>
+        </div>
+        
+        <!-- Historia V4: Múltiples threads -->
+        <div class="story-card" id="v4">
+            <h2 class="story-title">📖 Historia 5: Muchos Niños, Una Llave</h2>
+            
+            <div class="analogy-box">
+                <h3>👫 Llegan más amigos...</h3>
+                <p style="font-size: 1.2em; line-height: 1.6;">
+                    Pedro <span class="character">👦</span>, 
+                    Ana <span class="character">👧</span> y 
+                    Luis <span class="character">👶</span> 
+                    quieren usar el mismo columpio. ¡Solo hay una llave!
+                </p>
+            </div>
+            
+            <div class="playground">
+                <h3>Múltiples Threads (niños):</h3>
+                <div class="ride available">
+                    <div>🎠 Columpio</div>
+                    <span class="key">🗝️</span>
+                </div>
+                
+                <div class="waiting-line">
+                    <div class="kid playing">👦</div>
+                    <span style="font-size: 1.5em;">tiene la llave</span>
+                </div>
+                
+                <div class="waiting-line" style="background: #FFEBEE;">
+                    <div class="kid waiting">👧</div>
+                    <div class="kid waiting">👶</div>
+                    <span style="font-size: 1.5em;">esperando...</span>
+                </div>
+                
+                <button class="interactive-btn" onclick="animateKids()">
+                    🎬 Ver Animación
+                </button>
+            </div>
+            
+            <div class="explanation">
+                <h4>¿Qué pasa cuando hay muchos threads?</h4>
+                <ul style="font-size: 1.1em; line-height: 1.8;">
+                    <li>👦 Pedro tiene la llave → puede jugar</li>
+                    <li>👧 Ana espera → cuando Pedro suelte (wait), ella puede entrar</li>
+                    <li>👶 Luis también espera → tomará su turno después</li>
+                    <li>🔄 El orden puede cambiar (no es fijo)</li>
+                </ul>
+            </div>
+            
+            <div class="message-box">
+                🎪 <strong>Como en el parque real:</strong><br>
+                Muchos niños (threads) pueden querer el mismo juego (recurso),
+                pero solo uno puede usarlo a la vez. ¡Por eso necesitamos turnos!
+            </div>
+        </div>
+        
+        <!-- Historia V5: Interrupciones -->
+        <div class="story-card" id="v5">
+            <h2 class="story-title">📖 Historia 6: La Campana de Emergencia</h2>
+            
+            <div class="analogy-box">
+                <h3>🔔 ¡Ring Ring!</h3>
+                <p style="font-size: 1.2em; line-height: 1.6;">
+                    Los niños están esperando su turno cuando de repente...
+                    ¡Suena la campana de emergencia! <span class="character">🔔</span>
+                    Mamá los llama para ir a casa.
+                </p>
+            </div>
+            
+            <div class="playground">
+                <h3>Interrupt() = Campana de Emergencia:</h3>
+                
+                <div style="text-align: center; margin: 20px;">
+                    <span class="character" style="font-size: 4em;">🔔</span>
+                    <div class="timer" style="background: #f44336;">¡RING RING!</div>
+                </div>
+                
+                <div class="waiting-line">
+                    <div class="kid" style="background: #FF5722; animation: shake 0.5s infinite;">😲</div>
+                    <div class="kid" style="background: #FF5722; animation: shake 0.5s infinite;">😱</div>
+                    <div class="kid" style="background: #FF5722; animation: shake 0.5s infinite;">😮</div>
+                </div>
+                
+                <div class="speech-bubble">
+                    <strong>Mamá grita:</strong> "¡Niños! ¡Es hora de irnos! 
+                    ¡Dejen de esperar y vengan acá!"
+                    <br><br>
+                    (Esto es como thread.interrupt() en Java)
+                </div>
+            </div>
+            
+            <div class="code-comparison">
+                <div class="code-box">
+                    <h4>En Java (V5):</h4>
+                    <pre>t1.interrupt();
+t2.interrupt();</pre>
+                    <p>// Despierta a los threads</p>
+                </div>
+                <div class="code-box">
+                    <h4>En el Parque:</h4>
+                    <p>🔔 Suena la campana</p>
+                    <p>😲 Los niños dejan de esperar</p>
+                    <p>🏃 Todos corren a casa</p>
+                    <p>✋ No importa si era su turno</p>
+                </div>
+            </div>
+            
+            <div class="message-box">
+                🚨 <strong>¡Importante!</strong><br>
+                interrupt() es como una alarma que despierta a todos los que están esperando.
+                ¡Es útil para emergencias o cuando hay que parar todo!
+            </div>
+        </div>
+        
+        <!-- Historia V6: wait() vs sleep() -->
+        <div class="story-card" id="v6">
+            <h2 class="story-title">📖 Historia 7: Dormir vs Esperar Educadamente</h2>
+            
+            <div class="analogy-box">
+                <h3>😴 vs 🪑 Dos Formas de Descansar</h3>
+                <p style="font-size: 1.2em; line-height: 1.6;">
+                    Sofía puede hacer dos cosas diferentes en el columpio...
+                </p>
+            </div>
+            
+            <div class="playground">
+                <h3>Opción 1: DORMIR en el columpio (sleep)</h3>
+                <div class="ride occupied">
+                    <div>🎠 Columpio OCUPADO</div>
+                    <div class="kid sleeping">😴</div>
+                </div>
+                <div class="waiting-line" style="background: #FFCDD2;">
+                    <div class="kid" style="background: #f44336;">😠</div>
+                    <div class="kid" style="background: #f44336;">😤</div>
+                    <span style="color: red;">¡No pueden usar el columpio!</span>
+                </div>
+            </div>
+            
+            <div class="playground" style="background: #C8E6C9;">
+                <h3>Opción 2: ESPERAR en la banca (wait)</h3>
+                <div class="ride available">
+                    <div>🎠 Columpio LIBRE</div>
+                    <span class="key">🗝️ Disponible</span>
+                </div>
+                <div class="waiting-line">
+                    <div>🪑 Banca de espera:</div>
+                    <div class="kid waiting">😊</div>
+                    <div class="kid playing">😄</div>
+                    <span style="color: green;">¡Otros pueden jugar!</span>
+                </div>
+            </div>
+            
+            <div class="code-comparison">
+                <div class="code-box" style="border-color: #f44336;">
+                    <h4>Thread.sleep() - EGOÍSTA ❌:</h4>
+                    <pre>Thread.sleep(5000);</pre>
+                    <p>// NO suelta el monitor</p>
+                    <p>// Nadie más puede entrar</p>
+                </div>
+                <div class="code-box" style="border-color: #4CAF50;">
+                    <h4>wait() - COMPARTIDO ✅:</h4>
+                    <pre>obj.wait(5000);</pre>
+                    <p>// SÍ suelta el monitor</p>
+                    <p>// Otros pueden entrar</p>
+                </div>
+            </div>
+            
+            <div class="moral">
+                🌟 <strong>MORALEJA:</strong><br>
+                sleep() es como dormirse EN el juego (egoísta)<br>
+                wait() es como esperar en la banca (educado)<br>
+                ¡Siempre es mejor compartir!
+            </div>
+        </div>
+        
+        <!-- Historia Final: La Gran Lección -->
+        <div class="story-card" id="final">
+            <h2 class="story-title">🎓 La Gran Lección del Parque</h2>
+            
+            <div class="message-box" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                <h3>🏆 ¡Felicidades! Ya entiendes los Threads</h3>
+            </div>
+            
+            <div class="analogy-box" style="background: #E8F5E9;">
+                <h3>📚 Resumen de Todo lo Aprendido:</h3>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+                    <div style="text-align: center;">
+                        <div class="character" style="font-size: 4em;">😴</div>
+                        <h4>Thread.sleep()</h4>
+                        <p>Dormir CON el juguete</p>
+                        <p>❌ Nadie más puede jugar</p>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <div class="character" style="font-size: 4em;">🪑</div>
+                        <h4>wait()</h4>
+                        <p>Esperar en la banca</p>
+                        <p>✅ Otros pueden jugar</p>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <div class="character" style="font-size: 4em;">🗝️</div>
+                        <h4>synchronized</h4>
+                        <p>La llave mágica</p>
+                        <p>📝 Necesaria para wait()</p>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <div class="character" style="font-size: 4em;">🔔</div>
+                        <h4>interrupt()</h4>
+                        <p>La campana de emergencia</p>
+                        <p>🚨 Despierta a todos</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="playground" style="background: linear-gradient(to right, #FFEB3B, #FFC107);">
+                <h3>🎯 Las 5 Reglas de Oro del Parque (y de Java):</h3>
+                <ol style="font-size: 1.2em; line-height: 2; padding-left: 30px;">
+                    <li><strong>No puedes esperar sin llave</strong><br>
+                        <code style="background: white; padding: 5px; border-radius: 5px;">
+                            wait() necesita synchronized
+                        </code>
+                    </li>
+                    <li><strong>Dormir es diferente de esperar</strong><br>
+                        <code style="background: white; padding: 5px; border-radius: 5px;">
+                            sleep() bloquea, wait() libera
+                        </code>
+                    </li>
+                    <li><strong>Solo uno puede tener la llave</strong><br>
+                        <code style="background: white; padding: 5px; border-radius: 5px;">
+                            Un monitor = Un thread a la vez
+                        </code>
+                    </li>
+                    <li><strong>La campana despierta a todos</strong><br>
+                        <code style="background: white; padding: 5px; border-radius: 5px;">
+                            interrupt() para emergencias
+                        </code>
+                    </li>
+                    <li><strong>Compartir es mejor</strong><br>
+                        <code style="background: white; padding: 5px; border-radius: 5px;">
+                            wait() permite que otros jueguen
+                        </code>
+                    </li>
+                </ol>
+            </div>
+            
+            <div class="explanation" style="background: #F3E5F5; border-left-color: #9C27B0;">
+                <h3>🎮 Mini-Juego Mental:</h3>
+                <p style="font-size: 1.1em;">Imagina estos escenarios:</p>
+                <ul style="font-size: 1.1em; line-height: 1.8;">
+                    <li>❓ Si Pedro se duerme EN el tobogán, ¿qué método usó? 
+                        <span style="color: #2196F3;">(sleep)</span></li>
+                    <li>❓ Si Ana espera en la banca y deja el columpio libre, ¿qué usó? 
+                        <span style="color: #4CAF50;">(wait)</span></li>
+                    <li>❓ Si Luis intenta esperar sin pedir la llave primero, ¿qué pasa? 
+                        <span style="color: #f44336;">(Error)</span></li>
+                    <li>❓ Si suena la campana mientras todos esperan, ¿qué método es? 
+                        <span style="color: #FF9800;">(interrupt)</span></li>
+                </ul>
+            </div>
+            
+            <div class="message-box">
+                🎉 <strong>¡ERES UN CAMPEÓN!</strong> 🎉<br>
+                Ahora entiendes cómo funcionan los threads en Java.<br>
+                Los threads son como niños en el parque: necesitan turnos,<br>
+                llaves mágicas, y reglas para jugar juntos sin pelear.<br><br>
+                <span style="font-size: 1.5em;">🌟 ¡A programar! 🌟</span>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <button class="interactive-btn" onclick="celebrate()">
+                    🎊 ¡Celebrar!
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function showStory(story) {
+            // Ocultar todas las historias
+            document.querySelectorAll('.story-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            
+            // Mostrar la seleccionada
+            document.getElementById(story).classList.add('active');
+            
+            // Actualizar botones
+            document.querySelectorAll('.story-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Animar entrada
+            const activeCard = document.getElementById(story);
+            activeCard.style.animation = 'none';
+            setTimeout(() => {
+                activeCard.style.animation = 'slideIn 0.5s ease-out';
+            }, 10);
+        }
+        
+        function animateKids() {
+            // Seleccionar específicamente los niños en la historia 5 (v4)
+            const v4Section = document.getElementById('v4');
+            const kids = v4Section.querySelectorAll('.kid');
+            
+            // Resetear primero
+            kids.forEach(kid => {
+                kid.style.transition = 'all 0.3s ease';
+            });
+            
+            // Animación secuencial mostrando turnos
+            let currentKid = 0;
+            const animations = [
+                { text: '👦', bg: '#4CAF50', action: 'Jugando...' },
+                { text: '👧', bg: '#FF9800', action: 'Esperando...' },
+                { text: '👶', bg: '#FF9800', action: 'Esperando...' }
+            ];
+            
+            function animateSequence() {
+                // Primero, mostrar a Pedro jugando
+                setTimeout(() => {
+                    kids[0].style.transform = 'scale(1.3) rotate(10deg)';
+                    kids[0].style.background = '#4CAF50';
+                    kids[0].innerHTML = '😊';
+                    
+                    // Ana y Luis esperando
+                    if (kids[1]) {
+                        kids[1].style.transform = 'scale(0.9)';
+                        kids[1].style.background = '#FF9800';
+                        kids[1].innerHTML = '😔';
+                    }
+                    if (kids[2]) {
+                        kids[2].style.transform = 'scale(0.9)';
+                        kids[2].style.background = '#FF9800';
+                        kids[2].innerHTML = '😴';
+                    }
+                }, 500);
+                
+                // Pedro termina, Ana toma turno
+                setTimeout(() => {
+                    kids[0].style.transform = 'scale(1) rotate(0deg)';
+                    kids[0].style.background = '#9E9E9E';
+                    kids[0].innerHTML = '✅';
+                    
+                    if (kids[1]) {
+                        kids[1].style.transform = 'scale(1.3) rotate(-10deg)';
+                        kids[1].style.background = '#4CAF50';
+                        kids[1].innerHTML = '😄';
+                    }
+                }, 2000);
+                
+                // Ana termina, Luis toma turno
+                setTimeout(() => {
+                    if (kids[1]) {
+                        kids[1].style.transform = 'scale(1) rotate(0deg)';
+                        kids[1].style.background = '#9E9E9E';
+                        kids[1].innerHTML = '✅';
+                    }
+                    
+                    if (kids[2]) {
+                        kids[2].style.transform = 'scale(1.3) rotate(10deg)';
+                        kids[2].style.background = '#4CAF50';
+                        kids[2].innerHTML = '🤗';
+                    }
+                }, 3500);
+                
+                // Todos terminaron
+                setTimeout(() => {
+                    kids.forEach(kid => {
+                        kid.style.transform = 'scale(1)';
+                        kid.style.background = '#4CAF50';
+                        kid.innerHTML = '🎉';
+                    });
+                }, 5000);
+                
+                // Reset después de la animación
+                setTimeout(() => {
+                    kids[0].innerHTML = '👦';
+                    kids[0].style.background = '#4CAF50';
+                    if (kids[1]) {
+                        kids[1].innerHTML = '👧';
+                        kids[1].style.background = '#FF9800';
+                    }
+                    if (kids[2]) {
+                        kids[2].innerHTML = '👶';
+                        kids[2].style.background = '#FF9800';
+                    }
+                    kids.forEach(kid => {
+                        kid.style.transform = 'scale(1)';
+                    });
+                }, 6500);
+            }
+            
+            animateSequence();
+        }
+        
+        function celebrate() {
+            // Crear confeti
+            for (let i = 0; i < 50; i++) {
+                createConfetti();
+            }
+            
+            // Animar todo
+            document.querySelectorAll('.character').forEach((char, index) => {
+                setTimeout(() => {
+                    char.style.animation = 'jump 0.5s';
+                    setTimeout(() => {
+                        char.style.animation = 'wiggle 2s infinite';
+                    }, 500);
+                }, index * 100);
+            });
+            
+            // Sonido imaginario
+            const celebration = document.createElement('div');
+            celebration.innerHTML = '🎉🎊🎈🎆✨';
+            celebration.style.position = 'fixed';
+            celebration.style.top = '50%';
+            celebration.style.left = '50%';
+            celebration.style.transform = 'translate(-50%, -50%)';
+            celebration.style.fontSize = '5em';
+            celebration.style.zIndex = '1000';
+            celebration.style.animation = 'bounce 1s';
+            document.body.appendChild(celebration);
+            
+            setTimeout(() => {
+                celebration.remove();
+            }, 2000);
+        }
+        
+        function createConfetti() {
+            const confetti = document.createElement('div');
+            confetti.innerHTML = ['🎉', '🎊', '🎈', '⭐', '✨'][Math.floor(Math.random() * 5)];
+            confetti.style.position = 'fixed';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.top = '-50px';
+            confetti.style.fontSize = Math.random() * 20 + 20 + 'px';
+            confetti.style.zIndex = '999';
+            confetti.style.animation = `fall ${Math.random() * 3 + 2}s linear`;
+            document.body.appendChild(confetti);
+            
+            setTimeout(() => {
+                confetti.remove();
+            }, 3000);
+        }
+        
+        // Animación de caída para el confeti
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fall {
+                to {
+                    transform: translateY(calc(100vh + 100px)) rotate(360deg);
+                }
+            }
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Animar elementos al cargar
+        window.addEventListener('load', () => {
+            const characters = document.querySelectorAll('.character');
+            characters.forEach((char, index) => {
+                setTimeout(() => {
+                    char.style.opacity = '0';
+                    char.style.transform = 'scale(0)';
+                    setTimeout(() => {
+                        char.style.opacity = '1';
+                        char.style.transform = 'scale(1)';
+                        char.style.transition = 'all 0.5s';
+                    }, 100);
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>

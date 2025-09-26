@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<!-- saved from url=(0054)file:///Users/mike/Downloads/thread-visualization.html -->
+<html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualización de Threads en Java</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .version-selector {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .version-btn {
+            padding: 10px 20px;
+            background: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .version-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        
+        .version-btn.active {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .content-area {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            min-height: 600px;
+        }
+        
+        .visualization {
+            display: none;
+        }
+        
+        .visualization.active {
+            display: block;
+        }
+        
+        .code-section {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        
+        .diagram-section {
+            margin: 30px 0;
+        }
+        
+        .thread-diagram {
+            background: #fafafa;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .thread-line {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .thread-name {
+            width: 120px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .timeline {
+            flex: 1;
+            height: 40px;
+            background: linear-gradient(to right, #e0e0e0 0%, #e0e0e0 50%, #f0f0f0 50%, #f0f0f0 100%);
+            background-size: 20px 100%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .state {
+            position: absolute;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.5s;
+        }
+        
+        .state.running {
+            background: #4CAF50;
+        }
+        
+        .state.sleeping {
+            background: #2196F3;
+        }
+        
+        .state.waiting {
+            background: #FF9800;
+        }
+        
+        .state.blocked {
+            background: #f44336;
+        }
+        
+        .monitor-box {
+            border: 3px solid #9C27B0;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            background: #f3e5f5;
+        }
+        
+        .monitor-title {
+            color: #9C27B0;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .key-points {
+            background: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .key-points h3 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+        
+        .key-points ul {
+            margin-left: 20px;
+        }
+        
+        .key-points li {
+            margin: 5px 0;
+            color: #424242;
+        }
+        
+        .animation-controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .play-btn {
+            padding: 10px 30px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .play-btn:hover {
+            background: #1976D2;
+            transform: scale(1.05);
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .comparison-table th {
+            background: #673ab7;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .comparison-table td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .comparison-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        
+        .animating {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Visualización de Threads en Java - Evolución del Concepto</h1>
+        
+        <div class="version-selector">
+            <button class="version-btn" onclick="showVersion(&#39;v0&#39;)">V0: Thread.sleep()</button>
+            <button class="version-btn" onclick="showVersion(&#39;v1&#39;)">V1: wait() sin sincronización</button>
+            <button class="version-btn" onclick="showVersion(&#39;v2&#39;)">V2: synchronized + wait()</button>
+            <button class="version-btn" onclick="showVersion(&#39;v3&#39;)">V3: Monitor externo</button>
+            <button class="version-btn" onclick="showVersion(&#39;v4&#39;)">V4: Multithreading</button>
+            <button class="version-btn" onclick="showVersion(&#39;v5&#39;)">V5: Interrupciones</button>
+            <button class="version-btn" onclick="showVersion(&#39;v6&#39;)">V6: wait() vs sleep()</button>
+            <button class="version-btn" onclick="showVersion(&#39;v7&#39;)">V7: Combinación wait() + sleep()</button>
+            <button class="version-btn active" onclick="showVersion(&#39;comparison&#39;)">📊 Comparación</button>
+        </div>
+        
+        <div class="content-area">
+            <!-- V0: Thread.sleep() básico -->
+            <div class="visualization" id="v0">
+                <h2>Versión 0: Thread.sleep() básico</h2>
+                
+                <div class="code-section">
+                    <strong>Código clave:</strong><br>
+                    Thread.sleep(5000); // El thread actual duerme 5 segundos
+                </div>
+                
+                <div class="diagram-section">
+                    <h3>Diagrama de Estados del Thread</h3>
+                    <div class="thread-diagram">
+                        <div class="thread-line">
+                            <div class="thread-name">Main Thread</div>
+                            <div class="timeline" id="timeline-v0"><div class="state running" style="left: 0%; width: 30%;">RUNNING</div><div class="state sleeping" style="left: 30%; width: 50%;">SLEEPING (5s)</div><div class="state running" style="left: 80%; width: 20%;">RUNNING</div></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="key-points">
+                    <h3>🔑 Puntos Clave:</h3>
+                    <ul>
+                        <li><strong>Thread.sleep()</strong> hace que el thread actual se detenga temporalmente</li>
+                        <li>NO libera ningún monitor/lock</li>
+                        <li>El thread mantiene todos sus recursos bloqueados</li>
+                        <li>Útil para pausas simples sin sincronización</li>
+                        <li>Puede ser interrumpido con InterruptedException</li>
+                    </ul>
+                </div>
+                
+                <div class="animation-controls">
+                    <button class="play-btn" onclick="animateV0()">▶ Animar Ejecución</button>
+                </div>
+            </div>
+            
+            <!-- V1: wait() sin sincronización (ERROR) -->
+            <div class="visualization" id="v1">
+                <h2>Versión 1: wait() sin sincronización ❌</h2>
+                
+                <div class="code-section">
+                    <strong>Código problemático:</strong><br>
+                    wait(5000); // ❌ IllegalMonitorStateException!
+                </div>
+                
+                <div class="diagram-section">
+                    <h3>Diagrama de Error</h3>
+                    <div class="thread-diagram" style="background: #ffebee;">
+                        <div class="thread-line">
+                            <div class="thread-name">Main Thread</div>
+                            <div class="timeline">
+                                <div class="state running" style="width: 40%; left: 0px; opacity: 1;">RUNNING</div>
+                                <div class="state blocked" style="width: 60%; left: 40%; opacity: 1;">❌ EXCEPTION!</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px; color: #d32f2f; font-weight: bold;">
+                            ⚠️ IllegalMonitorStateException: El thread no posee el monitor del objeto
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="key-points">
+                    <h3>🔑 Lección Importante:</h3>
+                    <ul>
+                        <li><strong>wait()</strong> SIEMPRE requiere sincronización</li>
+                        <li>Debe llamarse dentro de un bloque synchronized</li>
+                        <li>El thread debe poseer el monitor del objeto</li>
+                        <li>Sin sincronización = IllegalMonitorStateException</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- V2: synchronized + wait() -->
+            <div class="visualization" id="v2">
+                <h2>Versión 2: synchronized + wait() ✅</h2>
+                
+                <div class="code-section">
+                    <strong>Código correcto:</strong><br>
+                    synchronized void dormir() {<br>
+                    &nbsp;&nbsp;wait(5000); // ✅ Ahora sí funciona<br>
+                    }
+                </div>
+                
+                <div class="monitor-box">
+                    <div class="monitor-title">Monitor del Objeto Pato</div>
+                    <div class="thread-diagram">
+                        <div class="thread-line">
+                            <div class="thread-name">Main Thread</div>
+                            <div class="timeline">
+                                <div class="state running" style="width: 25%; left: 0px; opacity: 1;">RUNNING</div>
+                                <div class="state waiting" style="width: 50%; left: 25%; opacity: 1;">WAITING (5s)</div>
+                                <div class="state running" style="width: 25%; left: 75%; opacity: 1;">RUNNING</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px; text-align: center; color: #666;">
+                            📌 Monitor: Adquirido → Liberado durante wait() → Re-adquirido
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="key-points">
+                    <h3>🔑 Diferencias clave wait() vs sleep():</h3>
+                    <ul>
+                        <li><strong>wait()</strong> LIBERA el monitor → otros threads pueden entrar</li>
+                        <li><strong>sleep()</strong> MANTIENE el monitor → bloquea a otros threads</li>
+                        <li>wait() permite sincronización cooperativa</li>
+                        <li>wait() puede ser despertado con notify()/notifyAll()</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- V3: Monitor externo -->
+            <div class="visualization" id="v3">
+                <h2>Versión 3: Monitor Externo</h2>
+                
+                <div class="code-section">
+                    <strong>Sincronización con objeto externo:</strong><br>
+                    synchronized (obj) {<br>
+                    &nbsp;&nbsp;obj.wait(5000);<br>
+                    }
+                </div>
+                
+                <div class="monitor-box">
+                    <div class="monitor-title">Monitor del Objeto 'obj' (externo)</div>
+                    <div class="thread-diagram">
+                        <div class="thread-line">
+                            <div class="thread-name">Main Thread</div>
+                            <div class="timeline">
+                                <div class="state running" style="width: 20%; left: 0px; opacity: 1;">RUNNING</div>
+                                <div class="state running" style="width: 10%; left: 20%; background: rgb(156, 39, 176); opacity: 1;">ACQUIRE</div>
+                                <div class="state waiting" style="width: 40%; left: 30%; opacity: 1;">WAITING</div>
+                                <div class="state running" style="width: 10%; left: 70%; background: rgb(156, 39, 176); opacity: 1;">REACQUIRE</div>
+                                <div class="state running" style="width: 20%; left: 80%; opacity: 1;">RUNNING</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="key-points">
+                    <h3>🔑 Ventajas del monitor externo:</h3>
+                    <ul>
+                        <li>Permite sincronización entre objetos diferentes</li>
+                        <li>Mayor flexibilidad en el diseño</li>
+                        <li>Múltiples objetos pueden compartir el mismo monitor</li>
+                        <li>Útil para coordinación compleja entre threads</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- V4: Multithreading -->
+            <div class="visualization" id="v4">
+                <h2>Versión 4: Multithreading Real</h2>
+                
+                <div class="code-section">
+                    <strong>Múltiples threads con el mismo monitor:</strong><br>
+                    new Thread(run,"Hilo1").start();<br>
+                    ((Pato)run).dormir(); // Main thread también espera
+                </div>
+                
+                <div class="monitor-box">
+                    <div class="monitor-title">Monitor Compartido (Object o)</div>
+                    <div class="thread-diagram">
+                        <div class="thread-line">
+                            <div class="thread-name">Hilo1</div>
+                            <div class="timeline">
+                                <div class="state running" style="width: 15%; left: 0px; opacity: 1;">START</div>
+                                <div class="state waiting" style="width: 60%; left: 15%; opacity: 1;">WAITING (5s)</div>
+                                <div class="state running" style="width: 25%; left: 75%; opacity: 1;">END</div>
+                            </div>
+                        </div>
+                        <div class="thread-line">
+                            <div class="thread-name">Main Thread</div>
+                            <div class="timeline">
+                                <div class="state running" style="width: 20%; left: 0px; opacity: 1;">RUNNING</div>
+                                <div class="state blocked" style="width: 10%; left: 20%; opacity: 1;">BLOCKED</div>
+                                <div class="state waiting" style="width: 50%; left: 30%; opacity: 1;">WAITING (5s)</div>
+                                <div class="state running" style="width: 20%; left: 80%; opacity: 1;">END</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; text-align: center; color: #666;">
+                            ⚡ Solo UN thread puede tener el monitor a la vez
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="key-points">
+                    <h3>🔑 Comportamiento con múltiples threads:</h3>
+                    <ul>
+                        <li>Threads compiten por el mismo monitor</li>
+                        <li>wait() libera el monitor → otro thread puede entrar</li>
+                        <li>Orden de ejecución no determinista</li>
+                        <li>Posible concurrencia real</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- V5: Interrupciones -->
+            <div class="visualization" id="v5">
+                <h2>Versión 5: Manejo de Interrupciones</h2>
+                
+                <div class="code-section">
+                    <strong>Interrumpiendo threads en espera:</strong><br>
+                    t1.interrupt();<br>
+                    t2.interrupt();
+                </div>
+                
+                <div class="thread-diagram">
+                    <div class="thread-line">
+                        <div class="thread-name">Hilo1</div>
+                        <div class="timeline">
+                            <div class="state running" style="width: 20%; left: 0px; opacity: 1;">RUNNING</div>
+                            <div class="state waiting" style="width: 20%; left: 20%; opacity: 1;">WAIT...</div>
+                            <div class="state blocked" style="width: 15%; left: 40%; background: rgb(255, 87, 34); opacity: 1;">INTERRUPTED!</div>
+                            <div class="state running" style="width: 45%; left: 55%; opacity: 1;">HANDLING</div>
+                        </div>
+                    </div>
+                    <div class="thread-line">
+                        <div class="thread-name">Hilo2</div>
+                        <div class="timeline">
+                            <div class="state running" style="width: 20%; left: 0px; opacity: 1;">RUNNING</div>
+                            <div class="state blocked" style="width: 20%; left: 20%; opacity: 1;">BLOCKED</div>
+                            <div class="state waiting" style="width: 15%; left: 40%; opacity: 1;">WAIT...</div>
+                            <div class="state blocked" style="width: 10%; left: 55%; background: rgb(255, 87, 34); opacity: 1;">INT!</div>
+                            <div class="state running" style="width: 35%; left: 65%; opacity: 1;">HANDLING</div>
+                        </div>
+                    </div>
+                    <div class="thread-line">
+                        <div class="thread-name">Main Thread</div>
+                        <div class="timeline">
+                            <div class="state running" style="width: 40%; left: 0px; opacity: 1;">RUNNING &amp; INTERRUPTING</div>
+                            <div class="state waiting" style="width: 40%; left: 40%; opacity: 1;">WAITING (5s)</div>
+                            <div class="state running" style="width: 20%; left: 80%; opacity: 1;">END</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="key-points">
+                    <h3>🔑 Interrupciones importantes:</h3>
+                    <ul>
+                        <li>interrupt() puede despertar un thread en wait() o sleep()</li>
+                        <li>Genera InterruptedException</li>
+                        <li>No garantiza terminación inmediata</li>
+                        <li>El thread debe manejar la interrupción apropiadamente</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- V6: wait() vs sleep() comparación -->
+            <div class="visualization" id="v6">
+                <h2>Versión 6: wait() vs sleep() - Comparación Práctica</h2>
+                
+                <div class="code-section">
+                    <strong>Opciones:</strong><br>
+                    obj.wait(5000);   // Libera el monitor<br>
+                    Thread.sleep(5000); // Mantiene el monitor
+                </div>
+                
+                <div class="diagram-section">
+                    <h3>Comportamiento con wait()</h3>
+                    <div class="monitor-box">
+                        <div class="thread-diagram">
+                            <div class="thread-line">
+                                <div class="thread-name">Hilo1</div>
+                                <div class="timeline">
+                                    <div class="state waiting" style="width: 30%; left: 0px; opacity: 1;">WAITING</div>
+                                    <div class="state running" style="width: 70%; left: 30%; opacity: 1;">RUNNING</div>
+                                </div>
+                            </div>
+                            <div class="thread-line">
+                                <div class="thread-name">Hilo2</div>
+                                <div class="timeline">
+                                    <div class="state waiting" style="width: 30%; left: 0px; opacity: 1;">WAITING</div>
+                                    <div class="state running" style="width: 70%; left: 30%; opacity: 1;">RUNNING</div>
+                                </div>
+                            </div>
+                            <div class="thread-line">
+                                <div class="thread-name">Main</div>
+                                <div class="timeline">
+                                    <div class="state waiting" style="width: 30%; left: 0px; opacity: 1;">WAITING</div>
+                                    <div class="state running" style="width: 70%; left: 30%; opacity: 1;">RUNNING</div>
+                                </div>
+                            </div>
+                        </div>
+                        <p style="text-align: center; margin-top: 10px; color: #4CAF50;">
+                            ✅ Todos pueden esperar simultáneamente (monitor liberado)
+                        </p>
+                    </div>
+                    
+                    <h3 style="margin-top: 30px;">Comportamiento con sleep()</h3>
+                    <div class="monitor-box" style="background: #ffebee; border-color: #f44336;">
+                        <div class="thread-diagram">
+                            <div class="thread-line">
+                                <div class="thread-name">Hilo1</div>
+                                <div class="timeline">
+                                    <div class="state sleeping" style="width: 50%; left: 0px; opacity: 1;">SLEEPING (tiene monitor)</div>
+                                    <div class="state running" style="width: 50%; left: 50%; opacity: 1;">RUNNING</div>
+                                </div>
+                            </div>
+                            <div class="thread-line">
+                                <div class="thread-name">Hilo2</div>
+                                <div class="timeline">
+                                    <div class="state blocked" style="width: 50%; left: 0px; opacity: 1;">BLOCKED</div>
+                                    <div class="state sleeping" style="width: 30%; left: 50%; opacity: 1;">SLEEP</div>
+                                    <div class="state running" style="width: 20%; left: 80%; opacity: 1;">RUN</div>
+                                </div>
+                            </div>
+                            <div class="thread-line">
+                                <div class="thread-name">Main</div>
+                                <div class="timeline">
+                                    <div class="state blocked" style="width: 80%; left: 0px; opacity: 1;">BLOCKED (esperando monitor)</div>
+                                    <div class="state running" style="width: 20%; left: 80%; opacity: 1;">RUN</div>
+                                </div>
+                            </div>
+                        </div>
+                        <p style="text-align: center; margin-top: 10px; color: #f44336;">
+                            ❌ Ejecución secuencial forzada (monitor NO liberado)
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- V7: Combinación wait() + sleep() -->
+            <div class="visualization" id="v7">
+                <h2>Versión 7: Combinación wait() + sleep()</h2>
+                
+                <div class="code-section">
+                    <strong>Patrón avanzado:</strong><br>
+                    synchronized (obj) {<br>
+                    &nbsp;&nbsp;obj.wait(5000);    // Primero espera y libera<br>
+                    &nbsp;&nbsp;Thread.sleep(5000); // Luego duerme y bloquea<br>
+                    }
+                </div>
+                
+                <div class="monitor-box">
+                    <div class="thread-diagram">
+                        <div class="thread-line">
+                            <div class="thread-name">Hilo1</div>
+                            <div class="timeline">
+                                <div class="state waiting" style="width: 25%; left: 0px; opacity: 1;">WAIT (5s)</div>
+                                <div class="state sleeping" style="width: 25%; left: 25%; background: rgb(103, 58, 183); opacity: 1;">SLEEP (5s)</div>
+                                <div class="state running" style="width: 50%; left: 50%; opacity: 1;">COMPLETE</div>
+                            </div>
+                        </div>
+                        <div class="thread-line">
+                            <div class="thread-name">Hilo2</div>
+                            <div class="timeline">
+                                <div class="state waiting" style="width: 25%; left: 0px; opacity: 1;">WAIT (5s)</div>
+                                <div class="state blocked" style="width: 25%; left: 25%; opacity: 1;">BLOCKED</div>
+                                <div class="state sleeping" style="width: 25%; left: 50%; background: rgb(103, 58, 183); opacity: 1;">SLEEP</div>
+                                <div class="state running" style="width: 25%; left: 75%; opacity: 1;">END</div>
+                            </div>
+                        </div>
+                        <div class="thread-line">
+                            <div class="thread-name">Main</div>
+                            <div class="timeline">
+                                <div class="state waiting" style="width: 25%; left: 0px; opacity: 1;">WAIT (5s)</div>
+                                <div class="state blocked" style="width: 50%; left: 25%; opacity: 1;">BLOCKED (esperando)</div>
+                                <div class="state sleeping" style="width: 15%; left: 75%; background: rgb(103, 58, 183); opacity: 1;">S</div>
+                                <div class="state running" style="width: 10%; left: 90%; opacity: 1;">E</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="key-points">
+                    <h3>🔑 Patrón híbrido:</h3>
+                    <ul>
+                        <li>Primera fase (wait): Todos esperan simultáneamente</li>
+                        <li>Segunda fase (sleep): Ejecución secuencial con monitor</li>
+                        <li>Útil para operaciones que requieren exclusión mutua después de esperar</li>
+                        <li>Combina cooperación y exclusión</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Comparación final -->
+            <div class="visualization active" id="comparison">
+                <h2>📊 Tabla Comparativa Completa</h2>
+                
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Versión</th>
+                            <th>Método</th>
+                            <th>Monitor</th>
+                            <th>Comportamiento</th>
+                            <th>Caso de Uso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>V0</strong></td>
+                            <td>Thread.sleep()</td>
+                            <td>No requiere</td>
+                            <td>Thread duerme, mantiene locks</td>
+                            <td>Pausas simples sin sincronización</td>
+                        </tr>
+                        <tr>
+                            <td><strong>V1</strong></td>
+                            <td>wait() sin sync</td>
+                            <td>❌ Error</td>
+                            <td>IllegalMonitorStateException</td>
+                            <td>Ejemplo de error común</td>
+                        </tr>
+                        <tr>
+                            <td><strong>V2</strong></td>
+                            <td>synchronized + wait()</td>
+                            <td>Del propio objeto</td>
+                            <td>Espera y libera monitor</td>
+                            <td>Sincronización básica</td>
+                        </tr>
+                        <tr>
+                            <td><strong>V3</strong></td>
+                            <td>sync(obj) + wait()</td>
+                            <td>Objeto externo</td>
+                            <td>Control fino del monitor</td>
+                            <td>Coordinación entre objetos</td>
+                        </tr>
+                        <tr>
+                            <td><strong>V4</strong></td>
+                            <td>Múltiples threads</td>
+                            <td>Compartido</td>
+                            <td>Concurrencia real</td>
+                            <td>Aplicaciones multi-thread</td>
+                        </tr>
+                        <tr>
+                            <td><strong>V5</strong></td>
+                            <td>interrupt()</td>
+                            <td>Con interrupciones</td>
+                            <td>Threads interrumpibles</td>
+                            <td>Cancelación de operaciones</td>
+                        </tr>
+                        <tr>
+                            <td><strong>V6</strong></td>
+                            <td>wait() vs sleep()</td>
+                            <td>Libera vs Mantiene</td>
+                            <td>Paralelo vs Secuencial</td>
+                            <td>Decisión de diseño crítica</td>
+                        </tr>
+                        <tr>
+                            <td><strong>V7</strong></td>
+                            <td>wait() + sleep()</td>
+                            <td>Híbrido</td>
+                            <td>Cooperación + Exclusión</td>
+                            <td>Patrones avanzados</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4CAF50;"></div>
+                        <span>Running</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #2196F3;"></div>
+                        <span>Sleeping</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #FF9800;"></div>
+                        <span>Waiting</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f44336;"></div>
+                        <span>Blocked</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #9C27B0;"></div>
+                        <span>Monitor Operations</span>
+                    </div>
+                </div>
+                
+                <div class="key-points" style="background: #fff3e0; border-color: #FF9800;">
+                    <h3>🎯 Decisiones de Diseño Clave:</h3>
+                    <ul>
+                        <li><strong>¿Necesitas sincronización?</strong> → No: usa sleep() | Sí: usa wait()</li>
+                        <li><strong>¿Múltiples threads deben esperar simultáneamente?</strong> → usa wait()</li>
+                        <li><strong>¿Necesitas mantener exclusividad durante la pausa?</strong> → usa sleep()</li>
+                        <li><strong>¿Necesitas poder interrumpir la espera?</strong> → Ambos soportan interrupciones</li>
+                        <li><strong>¿Necesitas notify/notifyAll?</strong> → Solo funciona con wait()</li>
+                    </ul>
+                </div>
+                
+                <div class="key-points" style="background: #e8f5e9; border-color: #4CAF50;">
+                    <h3>✅ Mejores Prácticas:</h3>
+                    <ul>
+                        <li>Siempre maneja InterruptedException apropiadamente</li>
+                        <li>Documenta claramente por qué usas wait() vs sleep()</li>
+                        <li>Considera usar java.util.concurrent para casos complejos</li>
+                        <li>Evita esperas indefinidas - usa timeouts</li>
+                        <li>Prueba exhaustivamente el comportamiento multi-thread</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function showVersion(version) {
+            // Ocultar todas las visualizaciones
+            document.querySelectorAll('.visualization').forEach(v => {
+                v.classList.remove('active');
+            });
+            
+            // Mostrar la seleccionada
+            document.getElementById(version).classList.add('active');
+            
+            // Actualizar botones
+            document.querySelectorAll('.version-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+        
+        function animateV0() {
+            const timeline = document.getElementById('timeline-v0');
+            timeline.innerHTML = '';
+            
+            // Estado inicial
+            const running1 = createState('RUNNING', 'running', '0%', '30%');
+            timeline.appendChild(running1);
+            
+            setTimeout(() => {
+                running1.classList.add('animating');
+                setTimeout(() => {
+                    running1.classList.remove('animating');
+                    const sleeping = createState('SLEEPING (5s)', 'sleeping', '30%', '50%');
+                    sleeping.classList.add('animating');
+                    timeline.appendChild(sleeping);
+                    
+                    setTimeout(() => {
+                        sleeping.classList.remove('animating');
+                        const running2 = createState('RUNNING', 'running', '80%', '20%');
+                        timeline.appendChild(running2);
+                    }, 2500);
+                }, 500);
+            }, 1000);
+        }
+        
+        function createState(text, className, left, width) {
+            const state = document.createElement('div');
+            state.className = `state ${className}`;
+            state.textContent = text;
+            state.style.left = left;
+            state.style.width = width;
+            return state;
+        }
+        
+        // Animación automática al cargar
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.querySelectorAll('.state').forEach(state => {
+                    state.style.opacity = '0';
+                    setTimeout(() => {
+                        state.style.opacity = '1';
+                    }, 100);
+                });
+            }, 500);
+        });
+        
+        // Función para animar diagramas específicos
+        function animateThreadDiagram(diagramId) {
+            const diagram = document.getElementById(diagramId);
+            if (!diagram) return;
+            
+            const states = diagram.querySelectorAll('.state');
+            states.forEach((state, index) => {
+                setTimeout(() => {
+                    state.classList.add('animating');
+                    setTimeout(() => {
+                        state.classList.remove('animating');
+                    }, 1000);
+                }, index * 500);
+            });
+        }
+    </script>
+
+</body></html>
