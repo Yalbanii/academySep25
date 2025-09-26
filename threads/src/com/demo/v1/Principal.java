@@ -4,7 +4,7 @@ class Pato{
 	void dormir(){
 		System.out.println("Pato espera 5 segundos");
 		try {
-			this.wait(5000);
+			wait(5000);
 			//Exception in thread "main" 
 			//java.lang.IllegalMonitorStateException: current thread is not owner
 		} catch (InterruptedException e) {

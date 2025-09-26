@@ -4,7 +4,7 @@ class Pato{
 	synchronized void dormir(){ //Obtiene el monitor del objeto Pato
 		System.out.println("Pato espera 5 segundos");
 		try {
-			this.wait(5000); //Libera 5 segundos el monitor
+			wait(5000); //Libera 5 segundos el monitor
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

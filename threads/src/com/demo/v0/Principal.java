@@ -7,6 +7,7 @@ class Pato{
 		System.out.println("Pato duerme 5 segundos");
 		try {
 			Thread.sleep(5000);
+			//Thread.currentThread().sleep(5000);
 		} catch (InterruptedException e) {
 			System.out.println("Interrumpieron al pato de su sueño");
 		}

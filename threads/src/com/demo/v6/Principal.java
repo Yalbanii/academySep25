@@ -13,6 +13,7 @@ class Pato implements Runnable {
 			System.out.println("Pato espera 5 segundos. Thread: "+Thread.currentThread().getName());
 			try {
 				obj.wait(5000); // Libera 5 segundos el monitor
+				//Thread.sleep(5000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}

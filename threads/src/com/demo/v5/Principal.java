@@ -42,8 +42,8 @@ public class Principal {
 		t1.interrupt();
 		t2.interrupt();
 		
-		t1.join();
-		t2.join();
+		((Pato)run1).dormir();
+		//Thread.currentThread().interrupt();
 		
 		System.out.println("End main");
 	}

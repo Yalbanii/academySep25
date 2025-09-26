@@ -30,13 +30,11 @@ public class Principal {
 		System.out.println("Begin main V4");
 		Object o = new Object(); // OBJECTO
 		Runnable run = new Pato(o); 
-		//pato.dormir();
+				
+		new Thread(run,"Hilo1").start();
 		
-		Thread t1 = new Thread(run,"Hilo1");
-		t1.start();
+		((Pato)run).dormir();
 		
-		t1.join();
-
 		System.out.println("End main");
 	}
 }
