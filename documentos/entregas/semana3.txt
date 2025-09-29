@@ -2,7 +2,7 @@ Entrega Semana 3:
 
 1. Simuladores OCA Test8, enviar imagen captura de pantalla. (No realizarlo durante las horas de la academia)
 2. Proyecto CRUD REST MongoDB, implementar Mockito en todas las capas, enviar imagen del Coverage.
-3. Proyecto con módulos y manejo de eventos para la comunicación entre los módulos.
+3. Proyecto SpringBoot Rest con módulos y manejo de eventos para la comunicación entre los módulos.
 4. Recomendación: Ver videos de Threads. https://youtube.com/playlist?list=PL6n6SIClb4puIzmad2HMEDkNtrFiFNPGl&si=GbFZBMdRbXD-z-MU
 
 Enviar solo el link de la semana 3 y su nombre completo en el chat (whatsapp) del grupo.

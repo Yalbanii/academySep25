@@ -67,7 +67,7 @@ Prepara a los participantes para proyectos empresariales complejos
 │ Customer Service│    │ Account Service │    │Notification Srv │
 │                 │    │                 │    │                 │
 │ Gestión de      │    │ Cuentas, saldos │    │ Alertas y       │
-│ clientes y KYC  │    │ y transferencias│    │ comunicaciones  │
+│ clientes        │    │ y transferencias│    │ comunicaciones  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -215,7 +215,7 @@ Proyecto demostrable para futuras oportunidades y crecimiento profesional
 - Strategy pattern implementado
 - Interfaces con múltiples implementaciones
 
-### Spring Core & MVC
+### Spring Core & Spring Rest
 - Controllers REST completos
 - Services con lógica de negocio
 - Configuración y manejo de beans
@@ -241,7 +241,7 @@ Proyecto demostrable para futuras oportunidades y crecimiento profesional
 - Transacciones ACID
 
 ### Spring REST
-- APIs RESTful completas
+- APIs RESTful completas con Swagger (Open API)
 - DTOs y validaciones
 - Manejo de errores y excepciones
 
