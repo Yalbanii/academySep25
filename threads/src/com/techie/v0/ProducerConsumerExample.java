@@ -65,7 +65,7 @@ public class ProducerConsumerExample {
 			try {
 				for (int i=0; i<10; i++) {
 					pc.consume(); //Consumir del 0 al 9
-					Thread.sleep(400); //Consumer tarda el doble del tiempo que el Producer
+					Thread.sleep(200); //Consumer tarda el doble del tiempo que el Producer
 				}
 			}catch(InterruptedException e) {
 				Thread.currentThread().interrupt();
@@ -73,11 +73,10 @@ public class ProducerConsumerExample {
 		});
 		
 		consumerThread.start();
-		Thread.sleep(1);
 		producerThread.start();
 		
-		producerThread.join(); //Thread main espera que termine el hilo producerThread
-		consumerThread.join(); //Thread main espera que termine el hilo consumerThread
+		//producerThread.join(); //Thread main espera que termine el hilo producerThread
+		//consumerThread.join(); //Thread main espera que termine el hilo consumerThread
 		
 		System.out.println("***End main***");
 		

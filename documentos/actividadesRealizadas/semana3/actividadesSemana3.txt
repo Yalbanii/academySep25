@@ -1,59 +1,37 @@
-Repaso Semana 3:
+Activides Semana 3:
 
 1. Threads.
 Demo01: Producer–Consumer using wait, notify, synchronized & join
 Demo02: Collection Concurrent: BlockingQueue
 Demo03: Imprimir nones y pares, un hilo imprime los nones y otro hilo imprime para los pares. (wait, notify & synchronized)
 
-2. BackEnd Spring Boot, Spring Data Mongo, MongoDB, @Service, consumido por MCP (Model Context Protocol).
+2. Proyecto BackEnd Spring Boot, Spring Data MongoDb, MongoDB, @Service, consumido por MCP (Model Context Protocol).
 
-3. App Registro Inteligente de Estacionamientos. SringBoot, SpringRest, OpenAPI(Swagger), @Service, Spring Data JPA, Mysql & manejo de eventos para la comunicación entre los módulos.
+3. BackEnd SpringBoot Registro Inteligente de Estacionamientos. SringBoot, SpringRest, OpenAPI(Swagger), @Service, Spring Data JPA, Mysql & manejo de eventos para la comunicación entre los módulos.
 
 4. Implementar StreamingResponseBody en un Rest
 
 1. El Problema
-
 Si una API necesita devolver miles o millones de registros (ejemplo: 50,000 o 1,000,000), Spring Boot por defecto:
-
 Carga todos los registros en memoria.
-
 Serializa todo el JSON.
-
 Entrega el resultado completo al cliente al final.
-
 Esto genera tiempos de espera largos (30 segundos, 1 minuto o más) → mala experiencia para el usuario.
 
 2. La Solución: Streaming de Respuestas
-
 En vez de esperar a que todos los datos estén listos, la API:
-
 Va enviando bloques de datos (chunks) conforme se procesan.
-
 El cliente empieza a recibir datos de inmediato, sin esperar al resultado completo.
-
-Solución: StreamingResponseBody en Spring MVC
-
+Solución: StreamingResponseBody en Spring Rest
 Usando el tipo StreamingResponseBody en el controlador.
 
 Paso a paso:
-
 Cambiar el tipo de respuesta a streaming (text/event-stream).
-
 Iterar los registros.
-
 Convertir cada registro a JSON.
-
 Escribirlos al OutputStream y “flushear” para enviarlos al cliente.
 
-👉 Ejemplo de uso:
 
-Descargar un PDF/CSV grande.
-
-Mostrar progreso de tareas largas.
-
-Enviar logs en vivo.
-
-Limitación: cada request mantiene ocupado un hilo de servlet. Escala mal si hay más de ~10,000 clientes concurrentes.
 
 
 

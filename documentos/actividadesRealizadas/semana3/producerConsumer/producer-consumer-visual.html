@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Producer-Consumer Pattern Explicado</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        
+        .main-diagram {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin: 40px 0;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .producer, .consumer {
+            background: linear-gradient(145deg, #f0f4f8, #e2e8f0);
+            border: 3px solid #4299e1;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            width: 200px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .producer:hover, .consumer:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
+        
+        .producer {
+            border-color: #48bb78;
+            background: linear-gradient(145deg, #f0fff4, #e6fffa);
+        }
+        
+        .consumer {
+            border-color: #ed8936;
+            background: linear-gradient(145deg, #fffaf0, #fef5e7);
+        }
+        
+        .queue-container {
+            text-align: center;
+            margin: 0 20px;
+        }
+        
+        .queue {
+            display: flex;
+            border: 3px solid #805ad5;
+            border-radius: 10px;
+            background: #f7fafc;
+            padding: 10px;
+            min-height: 60px;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .queue-slot {
+            width: 40px;
+            height: 40px;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            background: white;
+            transition: all 0.3s ease;
+        }
+        
+        .queue-slot.filled {
+            border-color: #805ad5;
+            background: linear-gradient(145deg, #e9d8fd, #d6bcfa);
+            color: #553c9a;
+            transform: scale(1.1);
+        }
+        
+        .arrow {
+            font-size: 2em;
+            color: #4a5568;
+            margin: 0 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(145deg, #4299e1, #3182ce);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn.produce {
+            background: linear-gradient(145deg, #48bb78, #38a169);
+        }
+        
+        .btn.consume {
+            background: linear-gradient(145deg, #ed8936, #dd6b20);
+        }
+        
+        .explanation {
+            background: #f7fafc;
+            border-left: 5px solid #4299e1;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 10px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .status.normal {
+            background: #e6fffa;
+            color: #234e52;
+            border: 2px solid #81e6d9;
+        }
+        
+        .status.full {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 2px solid #fc8181;
+        }
+        
+        .status.empty {
+            background: #fef5e7;
+            color: #744210;
+            border: 2px solid #f6ad55;
+        }
+        
+        .code-concept {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .highlight {
+            background: #ffd60a;
+            color: #000;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        
+        .timing-info {
+            background: linear-gradient(145deg, #e6fffa, #b2f5ea);
+            border: 2px solid #4fd1c7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏭 Producer-Consumer Pattern</h1>
+        <p class="subtitle">Explicación visual ProducerConsumerExample.java</p>
+        
+        <div class="main-diagram">
+            <div class="producer">
+                <h3>🏭 PRODUCTOR</h3>
+                <p>Crea números del 0 al 9</p>
+                <p><strong>Velocidad:</strong> 200ms</p>
+                <div id="producer-status">Listo para producir</div>
+            </div>
+            
+            <div class="arrow">→</div>
+            
+            <div class="queue-container">
+                <h3>📦 COLA (Queue)</h3>
+                <p><strong>Capacidad máxima: 5</strong></p>
+                <div class="queue" id="queue">
+                    <div class="queue-slot"></div>
+                    <div class="queue-slot"></div>
+                    <div class="queue-slot"></div>
+                    <div class="queue-slot"></div>
+                    <div class="queue-slot"></div>
+                </div>
+                <div id="queue-info">Elementos en cola: 0/5</div>
+            </div>
+            
+            <div class="arrow">→</div>
+            
+            <div class="consumer">
+                <h3>🍽️ CONSUMIDOR</h3>
+                <p>Consume los números</p>
+                <p><strong>Velocidad:</strong> 400ms</p>
+                <div id="consumer-status">Listo para consumir</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn produce" onclick="manualProduce()">🏭 Producir Manualmente</button>
+            <button class="btn consume" onclick="manualConsume()">🍽️ Consumir Manualmente</button>
+            <button class="btn" onclick="startDemo()">▶️ Ejecutar Simulación</button>
+            <button class="btn" onclick="resetDemo()">🔄 Reiniciar</button>
+        </div>
+        
+        <div id="status" class="status normal">
+            ✅ Sistema listo - La cola está vacía
+        </div>
+        
+        <div class="explanation">
+            <h3>🤔 ¿Cómo funciona?</h3>
+            <p><strong>1. El Productor</strong> crea números y los pone en la cola</p>
+            <p><strong>2. La Cola</strong> es como una fila en el supermercado - tiene espacio limitado (5 elementos)</p>
+            <p><strong>3. El Consumidor</strong> toma números de la cola para procesarlos</p>
+            <p><strong>4. Sincronización:</strong> Si la cola está llena, el productor espera. Si está vacía, el consumidor espera.</p>
+        </div>
+        
+        <div class="timing-info">
+            <h3>⏰ Diferencias de Velocidad</h3>
+            <p><strong>Productor:</strong> Crea un elemento cada 200ms (más rápido)</p>
+            <p><strong>Consumidor:</strong> Procesa un elemento cada 400ms (más lento)</p>
+            <p><strong>Resultado:</strong> La cola se llenará gradualmente porque el productor es más rápido</p>
+        </div>
+        
+        <div class="code-concept">
+            <h3>💻 Conceptos Clave del Código</h3>
+            <p><span class="highlight">synchronized</span> - Solo un hilo puede ejecutar el método a la vez</p>
+            <p><span class="highlight">wait()</span> - El hilo se pausa hasta ser notificado</p>
+            <p><span class="highlight">notifyAll()</span> - Despierta a todos los hilos que están esperando</p>
+            <p><span class="highlight">Queue&lt;Integer&gt;</span> - Una cola que almacena números enteros</p>
+            <p><span class="highlight">join()</span> - Hilo Main espera que los 2 hilos terminen</p>
+        </div>
+    </div>
+
+    <script>
+        let queue = [];
+        let maxCapacity = 5;
+        let currentNumber = 0;
+        let isRunning = false;
+        
+        function updateQueue() {
+            const queueElement = document.getElementById('queue');
+            const slots = queueElement.children;
+            
+            for (let i = 0; i < maxCapacity; i++) {
+                const slot = slots[i];
+                if (i < queue.length) {
+                    slot.textContent = queue[i];
+                    slot.classList.add('filled');
+                } else {
+                    slot.textContent = '';
+                    slot.classList.remove('filled');
+                }
+            }
+            
+            document.getElementById('queue-info').textContent = `Elementos en cola: ${queue.length}/${maxCapacity}`;
+            updateStatus();
+        }
+        
+        function updateStatus() {
+            const statusElement = document.getElementById('status');
+            
+            if (queue.length === 0) {
+                statusElement.className = 'status empty';
+                statusElement.innerHTML = '⚠️ Cola VACÍA - El consumidor debe esperar';
+            } else if (queue.length === maxCapacity) {
+                statusElement.className = 'status full';
+                statusElement.innerHTML = '🚫 Cola LLENA - El productor debe esperar';
+            } else {
+                statusElement.className = 'status normal';
+                statusElement.innerHTML = '✅ Sistema funcionando normalmente';
+            }
+        }
+        
+        function manualProduce() {
+            if (queue.length < maxCapacity) {
+                queue.push(currentNumber);
+                document.getElementById('producer-status').textContent = `Produjo: ${currentNumber}`;
+                currentNumber++;
+                updateQueue();
+                
+                setTimeout(() => {
+                    document.getElementById('producer-status').textContent = 'Listo para producir';
+                }, 1000);
+            } else {
+                document.getElementById('producer-status').textContent = '❌ Cola llena, esperando...';
+            }
+        }
+        
+        function manualConsume() {
+            if (queue.length > 0) {
+                const consumed = queue.shift();
+                document.getElementById('consumer-status').textContent = `Consumió: ${consumed}`;
+                updateQueue();
+                
+                setTimeout(() => {
+                    document.getElementById('consumer-status').textContent = 'Listo para consumir';
+                }, 1000);
+            } else {
+                document.getElementById('consumer-status').textContent = '❌ Cola vacía, esperando...';
+            }
+        }
+        
+        async function startDemo() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            resetDemo();
+            
+            // Simular el patrón real donde productor es más rápido
+            const producerInterval = setInterval(() => {
+                if (currentNumber < 10 && queue.length < maxCapacity) {
+                    queue.push(currentNumber);
+                    document.getElementById('producer-status').textContent = `Produjo: ${currentNumber}`;
+                    currentNumber++;
+                    updateQueue();
+                } else if (currentNumber >= 10) {
+                    clearInterval(producerInterval);
+                    document.getElementById('producer-status').textContent = 'Terminado';
+                } else {
+                    document.getElementById('producer-status').textContent = '❌ Cola llena, esperando...';
+                }
+            }, 200);
+            
+            const consumerInterval = setInterval(() => {
+                if (queue.length > 0) {
+                    const consumed = queue.shift();
+                    document.getElementById('consumer-status').textContent = `Consumió: ${consumed}`;
+                    updateQueue();
+                } else {
+                    document.getElementById('consumer-status').textContent = '❌ Cola vacía, esperando...';
+                }
+                
+                // Parar cuando no hay más que consumir y el productor terminó
+                if (queue.length === 0 && currentNumber >= 10) {
+                    clearInterval(consumerInterval);
+                    document.getElementById('consumer-status').textContent = 'Terminado';
+                    isRunning = false;
+                }
+            }, 400);
+        }
+        
+        function resetDemo() {
+            queue = [];
+            currentNumber = 0;
+            isRunning = false;
+            
+            document.getElementById('producer-status').textContent = 'Listo para producir';
+            document.getElementById('consumer-status').textContent = 'Listo para consumir';
+            
+            updateQueue();
+        }
+        
+        // Inicializar
+        updateQueue();
+    </script>
+</body>
+</html>
