@@ -26,3 +26,6 @@ Resumen del proyecto:
 
   El proyecto sigue principios de Spring Modulith para una arquitectura modular bien
   estructurada, con separación clara de responsabilidades entre los diferentes módulos del sistema.
+  
+  URL Swagger-ui
+  http://localhost:9191/swagger-ui/index.html

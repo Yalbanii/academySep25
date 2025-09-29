@@ -8,20 +8,21 @@ class Pato implements Runnable {
 		this.obj = obj;
 	}
 
-	void dormir() { 
+	void esperar() { 
 		synchronized (obj) { // Obtiene el monitor del objeto Object
 			System.out.println("Pato espera 5 segundos. Thread: "+Thread.currentThread().getName());
 			try {
 				obj.wait(5000); // Libera 5 segundos el monitor
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				System.out.println("Se interrumpio el Thread: "+Thread.currentThread().getName());
+				//e.printStackTrace();
 			}
 		}
 	}
 
 	@Override
 	public void run() {
-		dormir();
+		esperar();
 	}
 }
 
@@ -39,10 +40,11 @@ public class Principal {
 		t1.start();
 		t2.start();
 		
+		//Hilo main interrumpe
 		t1.interrupt();
 		t2.interrupt();
 		
-		((Pato)run1).dormir();
+		((Pato)run1).esperar();
 		//Thread.currentThread().interrupt();
 		
 		System.out.println("End main");

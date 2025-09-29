@@ -380,9 +380,9 @@
                     <h3>🔑 Diferencias clave wait() vs sleep():</h3>
                     <ul>
                         <li><strong>wait()</strong> LIBERA el monitor → otros threads pueden entrar</li>
-                        <li><strong>sleep()</strong> MANTIENE el monitor → bloquea a otros threads</li>
+                        <li><strong>sleep()</strong> MANTIENE el bloqueo → bloquea a otros threads</li>
                         <li>wait() permite sincronización cooperativa</li>
-                        <li>wait() puede ser despertado con notify()/notifyAll()</li>
+                        <li>wait() puede dejar de esperar con notify()/notifyAll()</li>
                     </ul>
                 </div>
             </div>

@@ -1,7 +1,10 @@
 package com.demo.v1;
 
+//NOTAS:
+//- Solo vamos a trabajar con el hilo main
+
 class Pato{
-	void dormir(){
+	void esperar(){
 		System.out.println("Pato espera 5 segundos");
 		try {
 			wait(5000);
@@ -21,7 +24,7 @@ public class Principal {
 
 		Pato pato = new Pato();
 		
-		pato.dormir();
+		pato.esperar();
 		
 		System.out.println("End main");
 

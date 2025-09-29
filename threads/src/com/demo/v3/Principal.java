@@ -1,5 +1,8 @@
 package com.demo.v3;
 
+//NOTAS:
+//- Solo vamos a trabajar con el hilo main
+
 class Pato {
 
 	Object obj;
@@ -8,7 +11,7 @@ class Pato {
 		this.obj = obj;
 	}
 
-	void dormir() { 
+	void esperar() { 
 		synchronized (obj) { // Obtiene el monitor del objeto Object
 			System.out.println("Pato espera 5 segundos");
 			try {
@@ -23,10 +26,10 @@ class Pato {
 public class Principal {
 	public static void main(String[] args) {
 		System.out.println("Begin main V3");
-		Object o = new Object(); // OBJECTO
+		Object o = new Object(); //OBJECTO DEL QUE OBTENEMOS EL MONITOR
 
 		Pato pato = new Pato(o); 
-		pato.dormir();
+		pato.esperar();
 
 		System.out.println("End main");
 	}
