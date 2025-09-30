@@ -161,6 +161,8 @@ Endpoints implementados (16 total):
 
 ## Pruebas Manuales Realizadas
 
+> Nota rápida: los IDs de cliente y los números de cuenta mostrados a continuación son de ejemplo. Al ejecutar los `curl`, usa los valores reales que devuelva la API (guárdalos para los pasos siguientes).
+
 ### 1. Crear Cliente y Cuentas
 ```bash
 # Cliente
@@ -204,6 +206,8 @@ POST /api/accounts/withdraw
 accountNumber: 400012345678, amount: 400
 # Resultado: ✅ Balance = $100.00
 ```
+
+> Nota sobre notificaciones: mientras el evento de `TransactionCompletedEvent` no incluye aún el `customerId`, las verificaciones manuales deben consultar los endpoints por `type` (`/api/notifications/type/{TYPE}`) en lugar de usar `/api/notifications/customer/{id}`.
 
 ---
 

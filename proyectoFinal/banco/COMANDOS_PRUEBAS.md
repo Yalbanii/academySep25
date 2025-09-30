@@ -33,25 +33,43 @@ curl http://localhost:8080/api/customers
 
 ---
 
+## 🗂️ Datos dinámicos que debes guardar
+
+- Los IDs de clientes y las cuentas se generan al vuelo. Guarda los valores que te devuelva la API para usarlos en los pasos siguientes.
+- Puedes exportarlos a variables de entorno inmediatamente después de cada creación para reutilizarlos en los `curl`.
+
+Ejemplo general:
+```bash
+export CUSTOMER_ID=<ID_devuelto_por_el_POST_de_customers>
+export ACCOUNT_CHECKING=<accountNumber_devuelto_por_el_POST_de_accounts_CHECKING>
+export ACCOUNT_SAVINGS=<accountNumber_devuelto_por_el_POST_de_accounts_SAVINGS>
+```
+> Si prefieres automatizarlo, captura la respuesta en una variable (`RESP=$(curl ... )`) y usa `jq` para extraer cada campo.
+
+---
+
 ## 🧪 Día 1: Customer Module
 
 ### 1. Crear un Cliente
 ```bash
-curl -X POST http://localhost:8080/api/customers \
+CUSTOMER_RESPONSE=$(curl -s -X POST http://localhost:8080/api/customers \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "María García",
-    "email": "maria.garcia@example.com",
+    "name": "Patrobas",
+    "email": "patrobas.garcia@example.com",
     "phone": "5559876543"
-  }' | jq .
+  }')
+echo "$CUSTOMER_RESPONSE" | jq .
+export CUSTOMER_ID=$(echo "$CUSTOMER_RESPONSE" | jq -r '.id')
+echo "ID del cliente guardado en CUSTOMER_ID=$CUSTOMER_ID"
 ```
 
 **Respuesta esperada:**
 ```json
 {
   "id": 1,
-  "name": "María García",
-  "email": "maria.garcia@example.com",
+  "name": "Patrobas",
+  "email": "patrobas.garcia@example.com",
   "phone": "5559876543",
   "status": "ACTIVE",
   "createdAt": "2025-09-30T...",
@@ -66,13 +84,12 @@ curl http://localhost:8080/api/customers | jq .
 
 ### 3. Obtener Cliente por ID
 ```bash
-# Reemplaza {id} con el ID real del cliente
-curl http://localhost:8080/api/customers/1 | jq .
+curl http://localhost:8080/api/customers/$CUSTOMER_ID | jq .
 ```
 
 ### 4. Actualizar Cliente
 ```bash
-curl -X PUT http://localhost:8080/api/customers/1 \
+curl -X PUT http://localhost:8080/api/customers/$CUSTOMER_ID \
   -H "Content-Type: application/json" \
   -d '{
     "name": "María García Rodríguez",
@@ -92,43 +109,41 @@ curl http://localhost:8080/api/customers/status/ACTIVE | jq .
 
 ### 1. Crear Cuenta CHECKING con balance inicial
 ```bash
-curl -X POST http://localhost:8080/api/accounts \
+ACCOUNT_CHECKING_PAYLOAD=$(jq -n \
+  --argjson customerId "$CUSTOMER_ID" \
+  --arg accountType "CHECKING" \
+  --argjson initialBalance 1000.00 \
+  '{customerId: $customerId, accountType: $accountType, initialBalance: $initialBalance}')
+ACCOUNT_CHECKING_RESPONSE=$(curl -s -X POST http://localhost:8080/api/accounts \
   -H "Content-Type: application/json" \
-  -d '{
-    "customerId": 1,
-    "accountType": "CHECKING",
-    "initialBalance": 1000.00
-  }' | jq .
+  -d "$ACCOUNT_CHECKING_PAYLOAD")
+echo "$ACCOUNT_CHECKING_RESPONSE" | jq .
+export ACCOUNT_CHECKING=$(echo "$ACCOUNT_CHECKING_RESPONSE" | jq -r '.accountNumber')
+export ACCOUNT_CHECKING_ID=$(echo "$ACCOUNT_CHECKING_RESPONSE" | jq -r '.id')
+echo "Cuenta CHECKING creada → número=$ACCOUNT_CHECKING (ID=$ACCOUNT_CHECKING_ID)"
 ```
 
-**Respuesta esperada:**
-```json
-{
-  "id": 1,
-  "accountNumber": "400012345678",
-  "customerId": 1,
-  "accountType": "CHECKING",
-  "balance": 1000.00,
-  "status": "ACTIVE",
-  "createdAt": "2025-09-30T...",
-  "updatedAt": "2025-09-30T..."
-}
-```
+**Lo que debes ver:** un objeto `AccountResponse` con el `id`, `accountNumber` generado dinámicamente, el `customerId` que acabas de crear, el `balance` inicial y los timestamps.
 
 **🔔 Verifica la notificación:**
 ```bash
-curl http://localhost:8080/api/notifications/customer/1 | jq '.[-1]'
+curl http://localhost:8080/api/notifications/customer/$CUSTOMER_ID | jq '.[-1]'
 ```
 
 ### 2. Crear Cuenta SAVINGS con balance inicial
 ```bash
-curl -X POST http://localhost:8080/api/accounts \
+ACCOUNT_SAVINGS_PAYLOAD=$(jq -n \
+  --argjson customerId "$CUSTOMER_ID" \
+  --arg accountType "SAVINGS" \
+  --argjson initialBalance 5000.00 \
+  '{customerId: $customerId, accountType: $accountType, initialBalance: $initialBalance}')
+ACCOUNT_SAVINGS_RESPONSE=$(curl -s -X POST http://localhost:8080/api/accounts \
   -H "Content-Type: application/json" \
-  -d '{
-    "customerId": 1,
-    "accountType": "SAVINGS",
-    "initialBalance": 5000.00
-  }' | jq .
+  -d "$ACCOUNT_SAVINGS_PAYLOAD")
+echo "$ACCOUNT_SAVINGS_RESPONSE" | jq .
+export ACCOUNT_SAVINGS=$(echo "$ACCOUNT_SAVINGS_RESPONSE" | jq -r '.accountNumber')
+export ACCOUNT_SAVINGS_ID=$(echo "$ACCOUNT_SAVINGS_RESPONSE" | jq -r '.id')
+echo "Cuenta SAVINGS creada → número=$ACCOUNT_SAVINGS (ID=$ACCOUNT_SAVINGS_ID)"
 ```
 
 ### 3. Obtener Todas las Cuentas
@@ -138,13 +153,13 @@ curl http://localhost:8080/api/accounts | jq .
 
 ### 4. Obtener Cuentas de un Cliente
 ```bash
-curl http://localhost:8080/api/accounts/customer/1 | jq .
+curl http://localhost:8080/api/accounts/customer/$CUSTOMER_ID | jq .
 ```
 
 ### 5. Obtener Cuenta por ID (no por número)
 ```bash
 # Usa el ID de la cuenta, no el número de cuenta
-curl http://localhost:8080/api/accounts/1 | jq .
+curl http://localhost:8080/api/accounts/$ACCOUNT_CHECKING_ID | jq .
 ```
 
 ### 6. Obtener Cuentas Activas
@@ -160,21 +175,17 @@ curl http://localhost:8080/api/accounts/status/ACTIVE | jq .
 
 **Depositar $1000:**
 ```bash
-curl -X POST http://localhost:8080/api/accounts/deposit \
+DEPOSIT_PAYLOAD=$(jq -n \
+  --arg accountNumber "$ACCOUNT_CHECKING" \
+  --argjson amount 1000.00 \
+  '{accountNumber: $accountNumber, amount: $amount}')
+DEPOSIT_RESPONSE=$(curl -s -X POST http://localhost:8080/api/accounts/deposit \
   -H "Content-Type: application/json" \
-  -d '{
-    "accountNumber": "400012345678",
-    "amount": 1000.00
-  }' | jq .
+  -d "$DEPOSIT_PAYLOAD")
+echo "$DEPOSIT_RESPONSE" | jq .
 ```
 
-**Respuesta esperada:**
-```json
-{
-  "accountNumber": "400012345678",
-  "balance": 1000.00
-}
-```
+**Lo que debes ver:** el `AccountResponse` de la cuenta con el nuevo `balance` incrementado en 1000.00 respecto al valor anterior.
 
 **🔔 Verifica la notificación de depósito:**
 ```bash
@@ -185,12 +196,14 @@ curl http://localhost:8080/api/notifications/type/DEPOSIT | jq .
 
 **Retirar $300:**
 ```bash
-curl -X POST http://localhost:8080/api/accounts/withdraw \
+WITHDRAW_PAYLOAD=$(jq -n \
+  --arg accountNumber "$ACCOUNT_CHECKING" \
+  --argjson amount 300.00 \
+  '{accountNumber: $accountNumber, amount: $amount}')
+WITHDRAW_RESPONSE=$(curl -s -X POST http://localhost:8080/api/accounts/withdraw \
   -H "Content-Type: application/json" \
-  -d '{
-    "accountNumber": "400012345678",
-    "amount": 300.00
-  }' | jq .
+  -d "$WITHDRAW_PAYLOAD")
+echo "$WITHDRAW_RESPONSE" | jq .
 ```
 
 **🔔 Verifica la notificación de retiro:**
@@ -202,13 +215,14 @@ curl http://localhost:8080/api/notifications/type/WITHDRAWAL | jq .
 
 **Transferir $250 entre cuentas:**
 ```bash
+TRANSFER_PAYLOAD=$(jq -n \
+  --arg fromAccountNumber "$ACCOUNT_CHECKING" \
+  --arg toAccountNumber "$ACCOUNT_SAVINGS" \
+  --argjson amount 250.00 \
+  '{fromAccountNumber: $fromAccountNumber, toAccountNumber: $toAccountNumber, amount: $amount}')
 curl -X POST http://localhost:8080/api/accounts/transfer \
   -H "Content-Type: application/json" \
-  -d '{
-    "fromAccountNumber": "400012345678",
-    "toAccountNumber": "400087654321",
-    "amount": 250.00
-  }'
+  -d "$TRANSFER_PAYLOAD"
 ```
 
 **🔔 Verifica las 2 notificaciones de transferencia:**
