@@ -53,4 +53,12 @@ public class Transaction {
         TRANSFER_OUT,
         INTEREST
     }
+    
+    /*
+		- `DEPOSIT` - Depósito
+		- `WITHDRAWAL` - Retiro
+		- `TRANSFER_IN` - Transferencia recibida
+		- `TRANSFER_OUT` - Transferencia enviada
+		- `INTEREST` - Intereses (para el batch del Día 5)
+     */
 }
