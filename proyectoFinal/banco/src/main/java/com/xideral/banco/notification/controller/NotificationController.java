@@ -3,7 +3,9 @@ package com.xideral.banco.notification.controller;
 import com.xideral.banco.notification.model.Notification;
 import com.xideral.banco.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
+@ConditionalOnBean(MongoTemplate.class)
 public class NotificationController {
 
     private final NotificationService notificationService;

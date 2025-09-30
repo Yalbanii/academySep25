@@ -36,12 +36,17 @@ Al finalizar este día, tendrás:
 
 ### Contenedores Docker
 
-#### 1. MySQL Container
+#### 1. MySQL Container Install
 ```bash
-docker run --name mysql-container \
+docker run --name mysql-containerTemp \
   -e MYSQL_ROOT_PASSWORD=xideral1234 \
   -p 3306:3306 \
   -d mysql:latest
+```
+
+#### Iniciar Container ya instalado
+```bash
+docker start mysql-container
 ```
 
 **Verificar que está corriendo:**
@@ -49,13 +54,18 @@ docker run --name mysql-container \
 docker ps | grep mysql
 ```
 
-#### 2. MongoDB Container
+#### 2. MongoDB Container Install
 ```bash
 docker run --name mongodb-container \
   -e MONGO_INITDB_ROOT_USERNAME=admin \
   -e MONGO_INITDB_ROOT_PASSWORD=xideral4321 \
   -p 27017:27017 \
   -d mongo:8
+```
+
+#### Iniciar Container ya instalado
+```bash
+docker start mongodb-container
 ```
 
 **Verificar que está corriendo:**

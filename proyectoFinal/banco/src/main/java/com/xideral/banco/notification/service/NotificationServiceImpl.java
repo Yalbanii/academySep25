@@ -4,7 +4,9 @@ import com.xideral.banco.notification.model.Notification;
 import com.xideral.banco.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -13,6 +15,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnBean(MongoTemplate.class)
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
