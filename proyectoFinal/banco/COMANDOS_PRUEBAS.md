@@ -196,15 +196,34 @@ curl http://localhost:8080/api/notifications/type/DEPOSIT | jq .
 
 **Retirar $300:**
 ```bash
+export ACCOUNT_CHECKING="400053095316"
+echo $ACCOUNT_CHECKING
+
 WITHDRAW_PAYLOAD=$(jq -n \
   --arg accountNumber "$ACCOUNT_CHECKING" \
   --argjson amount 300.00 \
   '{accountNumber: $accountNumber, amount: $amount}')
+
 WITHDRAW_RESPONSE=$(curl -s -X POST http://localhost:8080/api/accounts/withdraw \
   -H "Content-Type: application/json" \
   -d "$WITHDRAW_PAYLOAD")
+
 echo "$WITHDRAW_RESPONSE" | jq .
 ```
+
+```bash
+export ACCOUNT_CHECKING="400053095316"
+echo $ACCOUNT_CHECKING
+
+WITHDRAW_RESPONSE=$(curl -s -X POST http://localhost:8080/api/accounts/withdraw \
+-H "Content-Type: application/json" \
+-d "$WITHDRAW_PAYLOAD")
+
+echo "$WITHDRAW_RESPONSE" | jq .
+
+```
+
+
 
 **🔔 Verifica la notificación de retiro:**
 ```bash
