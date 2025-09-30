@@ -21,7 +21,6 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnBean(MongoTemplate.class)
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;

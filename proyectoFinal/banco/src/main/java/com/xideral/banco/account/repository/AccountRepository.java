@@ -40,5 +40,5 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     // Buscar cuentas activas (para batch processing)
     @Query("SELECT a FROM Account a WHERE a.status = 'ACTIVE'")
-    List<Account> findByActive();
+    org.springframework.data.domain.Page<Account> findActiveAccounts(org.springframework.data.domain.Pageable pageable);
 }

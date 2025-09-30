@@ -92,7 +92,7 @@ public class MonthlyInterestBatchConfig {
         return new RepositoryItemReaderBuilder<Account>()
                 .name("accountReader")
                 .repository(accountRepository)
-                .methodName("findByActive")
+                .methodName("findActiveAccounts")
                 .sorts(Collections.singletonMap("id", Sort.Direction.ASC))
                 .pageSize(10)
                 .build();

@@ -17,7 +17,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
-@ConditionalOnBean(MongoTemplate.class)
 public class NotificationController {
 
     private final NotificationService notificationService;

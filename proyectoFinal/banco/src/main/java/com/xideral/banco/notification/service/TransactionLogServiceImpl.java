@@ -18,7 +18,6 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnBean(MongoTemplate.class)
 public class TransactionLogServiceImpl implements TransactionLogService {
 
     private final TransactionLogRepository transactionLogRepository;
@@ -88,6 +87,21 @@ public class TransactionLogServiceImpl implements TransactionLogService {
     @Override
     public long countByAccountNumber(String accountNumber) {
         return transactionLogRepository.countByAccountNumber(accountNumber);
+    }
+
+    @Override
+    public List<TransactionLog> getTransactionLogsByStatus(String status) {
+        return transactionLogRepository.findByStatus(status);
+    }
+
+    @Override
+    public List<TransactionLog> getTransactionLogsByAmountRange(java.math.BigDecimal minAmount, java.math.BigDecimal maxAmount) {
+        return transactionLogRepository.findByAmountBetween(minAmount, maxAmount);
+    }
+
+    @Override
+    public long countByStatus(String status) {
+        return transactionLogRepository.countByStatus(status);
     }
 
     @Override

@@ -7,6 +7,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,6 +21,8 @@ public interface TransactionLogRepository extends MongoRepository<TransactionLog
 
     List<TransactionLog> findByCustomerId(Long customerId);
 
+    List<TransactionLog> findByStatus(String status);
+
     List<TransactionLog> findByAccountNumberOrderByTimestampDesc(String accountNumber);
 
     @Query("{ 'timestamp' : { $gte: ?0, $lte: ?1 } }")
@@ -31,7 +34,12 @@ public interface TransactionLogRepository extends MongoRepository<TransactionLog
     @Query("{ 'customerId' : ?0, 'timestamp' : { $gte: ?1, $lte: ?2 } }")
     List<TransactionLog> findByCustomerIdAndTimestampBetween(Long customerId, LocalDateTime start, LocalDateTime end);
 
+    @Query("{ 'amount' : { $gte: ?0, $lte: ?1 } }")
+    List<TransactionLog> findByAmountBetween(BigDecimal minAmount, BigDecimal maxAmount);
+
     long countByTransactionType(String transactionType);
 
     long countByAccountNumber(String accountNumber);
+
+    long countByStatus(String status);
 }
