@@ -1,12 +1,18 @@
 package com.xideral.banco.notification.service;
 
+import com.xideral.banco.events.AccountCreatedEvent;
+import com.xideral.banco.events.CustomerCreatedEvent;
+import com.xideral.banco.events.TransactionCompletedEvent;
+import com.xideral.banco.events.TransferCompletedEvent;
 import com.xideral.banco.notification.model.Notification;
 import com.xideral.banco.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -363,5 +369,71 @@ public class NotificationServiceImpl implements NotificationService {
     private boolean simulateInAppSend(Notification notification) {
         log.info("💬 IN-APP notification created: {}", notification.getMessage());
         return true;
+    }
+
+    // Event Listeners
+    @ApplicationModuleListener
+    public void handleCustomerCreated(CustomerCreatedEvent event) {
+        log.debug("Handling CustomerCreatedEvent for customer: {}", event.getEmail());
+        notifyCustomerRegistered(event.getCustomerId(), event.getEmail(), event.getFullName());
+    }
+
+    @ApplicationModuleListener
+    public void handleAccountCreated(AccountCreatedEvent event) {
+        log.debug("Handling AccountCreatedEvent for account: {}", event.getAccountNumber());
+        notifyAccountCreated(
+                event.getCustomerId(),
+                event.getCustomerEmail(),
+                event.getAccountNumber(),
+                event.getAccountType()
+        );
+    }
+
+    @ApplicationModuleListener
+    public void handleTransactionCompleted(TransactionCompletedEvent event) {
+        log.debug("Handling TransactionCompletedEvent for account: {}", event.getAccountNumber());
+
+        // Extraer customerId del email (asumiendo que podemos obtenerlo)
+        // En producción, deberíamos tener el customerId en el evento
+        Long customerId = 0L; // Placeholder
+
+        switch (event.getTransactionType()) {
+            case "DEPOSIT" -> {
+                // Buscar customerId (simplificado)
+                notifyDeposit(customerId, event.getCustomerEmail(), event.getAccountNumber(), event.getAmount().toString());
+            }
+            case "WITHDRAWAL" -> {
+                notifyWithdrawal(customerId, event.getCustomerEmail(), event.getAccountNumber(), event.getAmount().toString());
+                // Verificar saldo bajo
+                if (event.getNewBalance().compareTo(new java.math.BigDecimal("200.00")) < 0) {
+                    notifyLowBalance(customerId, event.getCustomerEmail(), event.getAccountNumber(), event.getNewBalance().toString());
+                }
+            }
+        }
+    }
+
+    @ApplicationModuleListener
+    public void handleTransferCompleted(TransferCompletedEvent event) {
+        log.debug("Handling TransferCompletedEvent from {} to {}", event.getSourceAccountNumber(), event.getTargetAccountNumber());
+
+        // En producción, deberíamos buscar los customerIds
+        Long sourceCustomerId = 0L; // Placeholder
+        Long targetCustomerId = 0L; // Placeholder
+
+        notifyTransferSent(
+                sourceCustomerId,
+                event.getSourceCustomerEmail(),
+                event.getSourceAccountNumber(),
+                event.getTargetAccountNumber(),
+                event.getAmount().toString()
+        );
+
+        notifyTransferReceived(
+                targetCustomerId,
+                event.getTargetCustomerEmail(),
+                event.getSourceAccountNumber(),
+                event.getTargetAccountNumber(),
+                event.getAmount().toString()
+        );
     }
 }

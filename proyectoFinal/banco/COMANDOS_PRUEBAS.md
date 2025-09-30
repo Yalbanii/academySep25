@@ -90,13 +90,14 @@ curl http://localhost:8080/api/customers/status/ACTIVE | jq .
 
 ## 🏦 Día 2: Account Module
 
-### 1. Crear Cuenta CHECKING
+### 1. Crear Cuenta CHECKING con balance inicial
 ```bash
 curl -X POST http://localhost:8080/api/accounts \
   -H "Content-Type: application/json" \
   -d '{
     "customerId": 1,
-    "accountType": "CHECKING"
+    "accountType": "CHECKING",
+    "initialBalance": 1000.00
   }' | jq .
 ```
 
@@ -105,9 +106,12 @@ curl -X POST http://localhost:8080/api/accounts \
 {
   "id": 1,
   "accountNumber": "400012345678",
+  "customerId": 1,
   "accountType": "CHECKING",
-  "balance": 0,
-  "active": true
+  "balance": 1000.00,
+  "status": "ACTIVE",
+  "createdAt": "2025-09-30T...",
+  "updatedAt": "2025-09-30T..."
 }
 ```
 
@@ -116,13 +120,14 @@ curl -X POST http://localhost:8080/api/accounts \
 curl http://localhost:8080/api/notifications/customer/1 | jq '.[-1]'
 ```
 
-### 2. Crear Cuenta SAVINGS
+### 2. Crear Cuenta SAVINGS con balance inicial
 ```bash
 curl -X POST http://localhost:8080/api/accounts \
   -H "Content-Type: application/json" \
   -d '{
     "customerId": 1,
-    "accountType": "SAVINGS"
+    "accountType": "SAVINGS",
+    "initialBalance": 5000.00
   }' | jq .
 ```
 
@@ -136,15 +141,15 @@ curl http://localhost:8080/api/accounts | jq .
 curl http://localhost:8080/api/accounts/customer/1 | jq .
 ```
 
-### 5. Obtener Cuenta por Número
+### 5. Obtener Cuenta por ID (no por número)
 ```bash
-# Reemplaza con el número de cuenta real
-curl http://localhost:8080/api/accounts/400012345678 | jq .
+# Usa el ID de la cuenta, no el número de cuenta
+curl http://localhost:8080/api/accounts/1 | jq .
 ```
 
 ### 6. Obtener Cuentas Activas
 ```bash
-curl http://localhost:8080/api/accounts/active | jq .
+curl http://localhost:8080/api/accounts/status/ACTIVE | jq .
 ```
 
 ---
@@ -447,6 +452,17 @@ curl http://localhost:8080/api/notifications/type/TRANSFER_RECEIVED | jq '.[-1]'
 
 ## 🔄 Día 5: Spring Batch - Monthly Interest Processing
 
+### ⚠️ IMPORTANTE: Habilitar Batch
+
+El batch está deshabilitado por defecto. Para habilitarlo:
+
+1. **Editar `application.properties`:**
+```properties
+spring.batch.job.enabled=true
+```
+
+2. **Reiniciar la aplicación**
+
 ### 1. Ejecutar Batch Job Manualmente
 
 **Trigger el job:**
@@ -463,14 +479,16 @@ curl -X POST http://localhost:8080/api/batch/monthly-interest | jq .
 }
 ```
 
+**Nota:** Si el batch está deshabilitado (`spring.batch.job.enabled=false`), este endpoint retornará 404.
+
 ---
 
 ### 2. Verificar Balances Antes y Después del Batch
 
-**Obtener balance de una cuenta ANTES del batch:**
+**Obtener balance de una cuenta ANTES del batch (usa ID, no número de cuenta):**
 ```bash
-ACCOUNT_NUMBER="400045427676"
-curl http://localhost:8080/api/accounts/$ACCOUNT_NUMBER | jq '{accountNumber, accountType, balance}'
+ACCOUNT_ID=1
+curl http://localhost:8080/api/accounts/$ACCOUNT_ID | jq '{id, accountNumber, accountType, balance}'
 ```
 
 **Ejecutar batch:**
@@ -481,13 +499,13 @@ curl -X POST http://localhost:8080/api/batch/monthly-interest
 **Esperar 3 segundos y verificar balance DESPUÉS:**
 ```bash
 sleep 3
-curl http://localhost:8080/api/accounts/$ACCOUNT_NUMBER | jq '{accountNumber, accountType, balance}'
+curl http://localhost:8080/api/accounts/$ACCOUNT_ID | jq '{id, accountNumber, accountType, balance}'
 ```
 
 **Ejemplo de resultado:**
 ```
-ANTES:  {"accountNumber": "400045427676", "accountType": "CHECKING", "balance": 150.00}
-DESPUÉS: {"accountNumber": "400045427676", "accountType": "CHECKING", "balance": 150.12}
+ANTES:  {"id": 1, "accountNumber": "400045427676", "accountType": "CHECKING", "balance": 150.00}
+DESPUÉS: {"id": 1, "accountNumber": "400045427676", "accountType": "CHECKING", "balance": 150.12}
 INTERÉS: $0.12 (0.083% mensual)
 ```
 
@@ -517,30 +535,27 @@ SAVINGS:  Balance × 0.004166667
 
 ---
 
-### 4. Verificar Logs de Batch en MongoDB
+### 4. Verificar Logs de Transacciones en MongoDB
 
-**Ver todos los logs de ejecución:**
+**Ver todos los logs de transacciones:**
 ```bash
-docker exec -it mongodb-container mongosh \
+docker exec mongodb-container mongosh \
   -u admin -p xideral4321 --authenticationDatabase admin \
-  --eval 'use banco_logs' \
-  --eval 'db.batch_job_execution_logs.find().pretty()'
+  --eval "db = db.getSiblingDB('banco_logs'); db.transactionLogs.find().pretty()"
 ```
 
-**Contar ejecuciones:**
+**Contar logs de transacciones:**
 ```bash
-docker exec -it mongodb-container mongosh \
+docker exec mongodb-container mongosh \
   -u admin -p xideral4321 --authenticationDatabase admin \
-  --eval 'use banco_logs' \
-  --eval 'db.batch_job_execution_logs.countDocuments()'
+  --eval "db = db.getSiblingDB('banco_logs'); db.transactionLogs.countDocuments()"
 ```
 
-**Ver última ejecución:**
+**Ver últimas transacciones:**
 ```bash
-docker exec -it mongodb-container mongosh \
+docker exec mongodb-container mongosh \
   -u admin -p xideral4321 --authenticationDatabase admin \
-  --eval 'use banco_logs' \
-  --eval 'db.batch_job_execution_logs.find().sort({createdAt: -1}).limit(1).pretty()'
+  --eval "db = db.getSiblingDB('banco_logs'); db.transactionLogs.find().sort({timestamp: -1}).limit(5).pretty()"
 ```
 
 **Respuesta esperada:**

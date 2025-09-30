@@ -37,4 +37,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     // Buscar cuentas con balance mayor a un monto
     @Query("SELECT a FROM Account a WHERE a.balance >= :minBalance")
     List<Account> findAccountsWithMinBalance(@Param("minBalance") java.math.BigDecimal minBalance);
+
+    // Buscar cuentas activas (para batch processing)
+    @Query("SELECT a FROM Account a WHERE a.status = 'ACTIVE'")
+    List<Account> findByActive();
 }

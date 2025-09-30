@@ -1,6 +1,7 @@
 package com.xideral.banco.notification.model;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
@@ -14,12 +15,15 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class TransactionLog {
 
     @Id
     private String id;
 
-    private Long transactionId;
+    private String transactionId;
+
+    private Long customerId;
 
     private Long accountId;
 

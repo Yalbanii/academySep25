@@ -2,11 +2,14 @@ package com.xideral.banco.customer.service;
 
 import com.xideral.banco.customer.model.Customer;
 import com.xideral.banco.customer.repository.CustomerRepository;
+import com.xideral.banco.events.CustomerCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -16,6 +19,7 @@ import java.util.List;
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public Customer createCustomer(Customer customer) {
@@ -28,6 +32,17 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setStatus(Customer.CustomerStatus.ACTIVE);
         Customer savedCustomer = customerRepository.save(customer);
         log.info("Customer created successfully with id: {}", savedCustomer.getId());
+
+        // Publicar evento
+        CustomerCreatedEvent event = new CustomerCreatedEvent(
+                savedCustomer.getId(),
+                savedCustomer.getName(),
+                savedCustomer.getEmail(),
+                LocalDateTime.now()
+        );
+        eventPublisher.publishEvent(event);
+        log.debug("CustomerCreatedEvent published for customer: {}", savedCustomer.getEmail());
+
         return savedCustomer;
     }
 

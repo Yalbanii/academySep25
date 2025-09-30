@@ -4,11 +4,12 @@ import com.xideral.banco.account.model.Account;
 import com.xideral.banco.account.repository.AccountRepository;
 import com.xideral.banco.customer.model.Customer;
 import com.xideral.banco.customer.repository.CustomerRepository;
-import com.xideral.banco.notification.service.NotificationService;
+import com.xideral.banco.events.AccountCreatedEvent;
+import com.xideral.banco.events.TransactionCompletedEvent;
+import com.xideral.banco.events.TransferCompletedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -25,11 +27,8 @@ public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository accountRepository;
     private final CustomerRepository customerRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final Random random = new Random();
-
-    @Autowired
-    @Lazy
-    private NotificationService notificationService;
 
     @Override
     public Account createAccount(Account account) {
@@ -64,19 +63,18 @@ public class AccountServiceImpl implements AccountService {
         Account savedAccount = accountRepository.save(account);
         log.info("Account created successfully: {}", savedAccount.getAccountNumber());
 
-        // Enviar notificación
-        if (notificationService != null) {
-            try {
-                notificationService.notifyAccountCreated(
-                        customer.getId(),
-                        customer.getEmail(),
-                        savedAccount.getAccountNumber(),
-                        savedAccount.getAccountType().toString()
-                );
-            } catch (Exception e) {
-                log.error("Error sending account created notification", e);
-            }
-        }
+        // Publicar evento
+        AccountCreatedEvent event = new AccountCreatedEvent(
+                savedAccount.getId(),
+                savedAccount.getAccountNumber(),
+                savedAccount.getAccountType().toString(),
+                savedAccount.getBalance(),
+                customer.getId(),
+                customer.getEmail(),
+                LocalDateTime.now()
+        );
+        eventPublisher.publishEvent(event);
+        log.debug("AccountCreatedEvent published for account: {}", savedAccount.getAccountNumber());
 
         return savedAccount;
     }
@@ -178,22 +176,6 @@ public class AccountServiceImpl implements AccountService {
         Account closedAccount = accountRepository.save(account);
         log.info("Account closed: {}", id);
 
-        // Enviar notificación
-        if (notificationService != null) {
-            try {
-                Customer customer = customerRepository.findById(account.getCustomerId()).orElse(null);
-                if (customer != null) {
-                    notificationService.notifyAccountClosed(
-                            customer.getId(),
-                            customer.getEmail(),
-                            account.getAccountNumber()
-                    );
-                }
-            } catch (Exception e) {
-                log.error("Error sending account closed notification", e);
-            }
-        }
-
         return closedAccount;
     }
 
@@ -221,21 +203,20 @@ public class AccountServiceImpl implements AccountService {
         log.info("Deposit successful. Account: {}, Amount: {}, New Balance: {}",
                 accountNumber, amount, newBalance);
 
-        // Enviar notificación
-        if (notificationService != null) {
-            try {
-                Customer customer = customerRepository.findById(account.getCustomerId()).orElse(null);
-                if (customer != null) {
-                    notificationService.notifyDeposit(
-                            customer.getId(),
-                            customer.getEmail(),
-                            accountNumber,
-                            amount.toString()
-                    );
-                }
-            } catch (Exception e) {
-                log.error("Error sending deposit notification", e);
-            }
+        // Publicar evento
+        Customer customer = customerRepository.findById(account.getCustomerId()).orElse(null);
+        if (customer != null) {
+            TransactionCompletedEvent event = new TransactionCompletedEvent(
+                    UUID.randomUUID().toString(),
+                    accountNumber,
+                    "DEPOSIT",
+                    amount,
+                    newBalance,
+                    customer.getEmail(),
+                    LocalDateTime.now()
+            );
+            eventPublisher.publishEvent(event);
+            log.debug("TransactionCompletedEvent published for deposit on account: {}", accountNumber);
         }
 
         return updatedAccount;
@@ -274,35 +255,20 @@ public class AccountServiceImpl implements AccountService {
         log.info("Withdrawal successful. Account: {}, Amount: {}, New Balance: {}",
                 accountNumber, amount, newBalance);
 
-        // Enviar notificación
-        if (notificationService != null) {
-            try {
-                Customer customer = customerRepository.findById(account.getCustomerId()).orElse(null);
-                if (customer != null) {
-                    notificationService.notifyWithdrawal(
-                            customer.getId(),
-                            customer.getEmail(),
-                            accountNumber,
-                            amount.toString()
-                    );
-
-                    // Notificar si el saldo queda bajo (menor a $200 para CHECKING, menor a $150 para SAVINGS)
-                    BigDecimal lowBalanceThreshold = account.getAccountType() == Account.AccountType.CHECKING
-                            ? new BigDecimal("200.00")
-                            : new BigDecimal("150.00");
-
-                    if (newBalance.compareTo(lowBalanceThreshold) < 0) {
-                        notificationService.notifyLowBalance(
-                                customer.getId(),
-                                customer.getEmail(),
-                                accountNumber,
-                                newBalance.toString()
-                        );
-                    }
-                }
-            } catch (Exception e) {
-                log.error("Error sending withdrawal notification", e);
-            }
+        // Publicar evento
+        Customer customer = customerRepository.findById(account.getCustomerId()).orElse(null);
+        if (customer != null) {
+            TransactionCompletedEvent event = new TransactionCompletedEvent(
+                    UUID.randomUUID().toString(),
+                    accountNumber,
+                    "WITHDRAWAL",
+                    amount,
+                    newBalance,
+                    customer.getEmail(),
+                    LocalDateTime.now()
+            );
+            eventPublisher.publishEvent(event);
+            log.debug("TransactionCompletedEvent published for withdrawal on account: {}", accountNumber);
         }
 
         return updatedAccount;
@@ -351,35 +317,23 @@ public class AccountServiceImpl implements AccountService {
         log.info("Transfer successful. From: {}, To: {}, Amount: {}",
                 fromAccountNumber, toAccountNumber, amount);
 
-        // Enviar notificaciones
-        if (notificationService != null) {
-            try {
-                // Notificar al remitente
-                Customer fromCustomer = customerRepository.findById(fromAccount.getCustomerId()).orElse(null);
-                if (fromCustomer != null) {
-                    notificationService.notifyTransferSent(
-                            fromCustomer.getId(),
-                            fromCustomer.getEmail(),
-                            fromAccountNumber,
-                            toAccountNumber,
-                            amount.toString()
-                    );
-                }
+        // Publicar evento
+        Customer fromCustomer = customerRepository.findById(fromAccount.getCustomerId()).orElse(null);
+        Customer toCustomer = customerRepository.findById(toAccount.getCustomerId()).orElse(null);
 
-                // Notificar al destinatario
-                Customer toCustomer = customerRepository.findById(toAccount.getCustomerId()).orElse(null);
-                if (toCustomer != null) {
-                    notificationService.notifyTransferReceived(
-                            toCustomer.getId(),
-                            toCustomer.getEmail(),
-                            fromAccountNumber,
-                            toAccountNumber,
-                            amount.toString()
-                    );
-                }
-            } catch (Exception e) {
-                log.error("Error sending transfer notifications", e);
-            }
+        if (fromCustomer != null && toCustomer != null) {
+            TransferCompletedEvent event = new TransferCompletedEvent(
+                    UUID.randomUUID().toString(),
+                    fromAccountNumber,
+                    toAccountNumber,
+                    amount,
+                    fromCustomer.getEmail(),
+                    toCustomer.getEmail(),
+                    LocalDateTime.now()
+            );
+            eventPublisher.publishEvent(event);
+            log.debug("TransferCompletedEvent published for transfer from {} to {}",
+                    fromAccountNumber, toAccountNumber);
         }
     }
 

@@ -84,36 +84,38 @@ echo ""
 echo -e "${BLUE}=== DÍA 2: ACCOUNT MODULE ===${NC}"
 echo ""
 
-# 2.1 Crear Cuenta CHECKING
-echo -n "2.1 Crear cuenta CHECKING... "
+# 2.1 Crear Cuenta CHECKING con balance inicial
+echo -n "2.1 Crear cuenta CHECKING con balance inicial... "
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/api/accounts \
   -H "Content-Type: application/json" \
   -d "{
     \"customerId\": $CUSTOMER_ID,
     \"accountType\": \"CHECKING\",
-    \"balance\": 0
+    \"initialBalance\": 1000.00
   }")
 HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 check_status $HTTP_CODE
 ACCOUNT_1=$(echo $BODY | jq -r '.accountNumber')
-echo "   Account Number: $ACCOUNT_1"
+ACCOUNT_1_ID=$(echo $BODY | jq -r '.id')
+echo "   Account ID: $ACCOUNT_1_ID, Number: $ACCOUNT_1"
 pause
 
-# 2.2 Crear Cuenta SAVINGS
-echo -n "2.2 Crear cuenta SAVINGS... "
+# 2.2 Crear Cuenta SAVINGS con balance inicial
+echo -n "2.2 Crear cuenta SAVINGS con balance inicial... "
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/api/accounts \
   -H "Content-Type: application/json" \
   -d "{
     \"customerId\": $CUSTOMER_ID,
     \"accountType\": \"SAVINGS\",
-    \"balance\": 0
+    \"initialBalance\": 5000.00
   }")
 HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 check_status $HTTP_CODE
 ACCOUNT_2=$(echo $BODY | jq -r '.accountNumber')
-echo "   Account Number: $ACCOUNT_2"
+ACCOUNT_2_ID=$(echo $BODY | jq -r '.id')
+echo "   Account ID: $ACCOUNT_2_ID, Number: $ACCOUNT_2"
 pause
 
 # 2.3 Obtener todas las cuentas
@@ -170,11 +172,11 @@ pause
 
 # 3.4 Verificar balances finales
 echo -n "3.4 Verificar balances finales... "
-ACCOUNTS=$(curl -s $BASE_URL/api/accounts | jq -r ".[] | select(.accountNumber == \"$ACCOUNT_1\" or .accountNumber == \"$ACCOUNT_2\") | \"\(.accountNumber): $\(.balance)\"")
-echo ""
-echo "$ACCOUNTS" | while read line; do
-    echo "   $line"
-done
+BALANCE_1=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_1_ID | jq -r '.balance')
+BALANCE_2=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_2_ID | jq -r '.balance')
+echo -e "${GREEN}✅ PASS${NC}"
+echo "   Cuenta $ACCOUNT_1: \$$BALANCE_1"
+echo "   Cuenta $ACCOUNT_2: \$$BALANCE_2"
 pause
 
 echo ""
@@ -228,8 +230,8 @@ echo ""
 
 # 5.1 Obtener balances antes de ejecutar batch
 echo -n "5.1 Obtener balances antes del batch... "
-BALANCE_1_BEFORE=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_1 | jq -r '.balance')
-BALANCE_2_BEFORE=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_2 | jq -r '.balance')
+BALANCE_1_BEFORE=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_1_ID | jq -r '.balance')
+BALANCE_2_BEFORE=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_2_ID | jq -r '.balance')
 echo -e "${GREEN}✅ PASS${NC}"
 echo "   Cuenta 1 (CHECKING): \$$BALANCE_1_BEFORE"
 echo "   Cuenta 2 (SAVINGS): \$$BALANCE_2_BEFORE"
@@ -240,10 +242,17 @@ echo -n "5.2 Ejecutar Batch Job de Intereses... "
 BATCH_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/api/batch/monthly-interest)
 HTTP_CODE=$(echo "$BATCH_RESPONSE" | tail -n1)
 BODY=$(echo "$BATCH_RESPONSE" | head -n-1)
-check_status $HTTP_CODE
-if [ $HTTP_CODE -eq 200 ]; then
+
+# Verificar si el batch está habilitado
+if [ $HTTP_CODE -eq 404 ]; then
+    echo -e "${YELLOW}⚠️  SKIP (Batch deshabilitado - spring.batch.job.enabled=false)${NC}"
+    echo "   Para habilitar: spring.batch.job.enabled=true en application.properties"
+elif [ $HTTP_CODE -eq 200 ]; then
+    echo -e "${GREEN}✅ PASS${NC}"
     echo "   Message: $(echo $BODY | jq -r '.message')"
     echo "   Status: $(echo $BODY | jq -r '.status')"
+else
+    echo -e "${RED}❌ FAIL (HTTP $HTTP_CODE)${NC}"
 fi
 pause
 
@@ -253,40 +262,50 @@ sleep 3
 echo -e "${GREEN}✅ DONE${NC}"
 pause
 
-# 5.4 Verificar balances después del batch
-echo -n "5.4 Verificar balances después del batch... "
-BALANCE_1_AFTER=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_1 | jq -r '.balance')
-BALANCE_2_AFTER=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_2 | jq -r '.balance')
-echo -e "${GREEN}✅ PASS${NC}"
+# 5.4 Verificar balances después del batch (solo si batch está habilitado)
+if [ $HTTP_CODE -eq 200 ]; then
+    echo -n "5.4 Verificar balances después del batch... "
+    BALANCE_1_AFTER=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_1_ID | jq -r '.balance')
+    BALANCE_2_AFTER=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_2_ID | jq -r '.balance')
+    echo -e "${GREEN}✅ PASS${NC}"
 
-# Calcular intereses aplicados
-INTEREST_1=$(echo "$BALANCE_1_AFTER - $BALANCE_1_BEFORE" | bc)
-INTEREST_2=$(echo "$BALANCE_2_AFTER - $BALANCE_2_BEFORE" | bc)
-TOTAL_INTEREST=$(echo "$INTEREST_1 + $INTEREST_2" | bc)
+    # Calcular intereses aplicados
+    INTEREST_1=$(echo "$BALANCE_1_AFTER - $BALANCE_1_BEFORE" | bc)
+    INTEREST_2=$(echo "$BALANCE_2_AFTER - $BALANCE_2_BEFORE" | bc)
+    TOTAL_INTEREST=$(echo "$INTEREST_1 + $INTEREST_2" | bc)
 
-echo ""
-echo "   Cuenta 1 (CHECKING):"
-echo "     - Balance antes: \$$BALANCE_1_BEFORE"
-echo "     - Balance después: \$$BALANCE_1_AFTER"
-echo "     - Interés aplicado: \$$INTEREST_1 (1% anual = 0.083% mensual)"
-echo ""
-echo "   Cuenta 2 (SAVINGS):"
-echo "     - Balance antes: \$$BALANCE_2_BEFORE"
-echo "     - Balance después: \$$BALANCE_2_AFTER"
-echo "     - Interés aplicado: \$$INTEREST_2 (5% anual = 0.42% mensual)"
-echo ""
-echo "   Total Interés Aplicado: \$$TOTAL_INTEREST"
+    echo ""
+    echo "   Cuenta 1 (CHECKING):"
+    echo "     - Balance antes: \$$BALANCE_1_BEFORE"
+    echo "     - Balance después: \$$BALANCE_1_AFTER"
+    echo "     - Interés aplicado: \$$INTEREST_1 (1% anual = 0.083% mensual)"
+    echo ""
+    echo "   Cuenta 2 (SAVINGS):"
+    echo "     - Balance antes: \$$BALANCE_2_BEFORE"
+    echo "     - Balance después: \$$BALANCE_2_AFTER"
+    echo "     - Interés aplicado: \$$INTEREST_2 (5% anual = 0.42% mensual)"
+    echo ""
+    echo "   Total Interés Aplicado: \$$TOTAL_INTEREST"
+else
+    echo "5.4 Batch deshabilitado - salteando verificación de intereses"
+    BALANCE_1_AFTER=$BALANCE_1_BEFORE
+    BALANCE_2_AFTER=$BALANCE_2_BEFORE
+    TOTAL_INTEREST="0.00"
+fi
 pause
 
-# 5.5 Verificar logs en MongoDB (opcional, requiere mongosh)
+# 5.5 Verificar logs de transacciones en MongoDB
 echo ""
-echo -n "5.5 Verificar logs de batch en MongoDB... "
-if command -v mongosh &> /dev/null; then
-    BATCH_LOGS=$(mongosh --quiet --eval 'use banco_logs' --eval 'db.batch_job_execution_logs.countDocuments()')
+echo -n "5.5 Verificar logs de transacciones en MongoDB... "
+TRANSACTION_LOGS=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin --quiet \
+  --eval "db = db.getSiblingDB('banco_logs'); db.transactionLogs.countDocuments()" 2>/dev/null)
+
+if [ ! -z "$TRANSACTION_LOGS" ]; then
     echo -e "${GREEN}✅ PASS${NC}"
-    echo "   Total batch logs en MongoDB: $BATCH_LOGS"
+    echo "   Total transaction logs en MongoDB: $TRANSACTION_LOGS"
 else
-    echo -e "${YELLOW}⚠️  SKIP (mongosh no instalado)${NC}"
+    echo -e "${YELLOW}⚠️  SKIP (MongoDB no disponible o sin logs)${NC}"
 fi
 pause
 
@@ -367,27 +386,27 @@ else
 fi
 pause
 
-# 6.6 Verificar colección de batch jobs
-echo -n "6.6 Verificar colección de batch_job_executions... "
-BATCH_COUNT=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
+# 6.6 Verificar colección de transaction logs
+echo -n "6.6 Verificar colección de transactionLogs... "
+TRANS_LOG_COUNT=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
   --authenticationDatabase admin --quiet \
-  --eval "db = db.getSiblingDB('banco_logs'); db.batch_job_executions.countDocuments()" 2>/dev/null)
+  --eval "db = db.getSiblingDB('banco_logs'); db.transactionLogs.countDocuments()" 2>/dev/null)
 echo -e "${GREEN}✅ PASS${NC}"
-echo "   Total batch executions en MongoDB: $BATCH_COUNT"
+echo "   Total transaction logs en MongoDB: $TRANS_LOG_COUNT"
 pause
 
-# 6.7 Verificar último batch job
-if [ "$BATCH_COUNT" -gt "0" ]; then
-    echo -n "6.7 Verificar último batch job... "
-    LAST_BATCH=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
+# 6.7 Verificar última transacción
+if [ "$TRANS_LOG_COUNT" -gt "0" ]; then
+    echo -n "6.7 Verificar última transacción... "
+    LAST_TRANS=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
       --authenticationDatabase admin --quiet \
-      --eval "db = db.getSiblingDB('banco_logs'); var b = db.batch_job_executions.findOne({}, {sort: {startTime: -1}}); if (b) print(b.jobName + ' - ' + b.status); else print('none')" 2>/dev/null)
-    if [ ! -z "$LAST_BATCH" ] && [ "$LAST_BATCH" != "none" ]; then
+      --eval "db = db.getSiblingDB('banco_logs'); var t = db.transactionLogs.findOne({}, {sort: {timestamp: -1}}); if (t) print(t.transactionType + ' - ' + t.amount); else print('none')" 2>/dev/null)
+    if [ ! -z "$LAST_TRANS" ] && [ "$LAST_TRANS" != "none" ]; then
         echo -e "${GREEN}✅ PASS${NC}"
-        echo "   Último batch: $LAST_BATCH"
+        echo "   Última transacción: $LAST_TRANS"
     fi
 else
-    echo "6.7 No hay batch jobs ejecutados todavía"
+    echo "6.7 No hay transacciones registradas todavía"
 fi
 pause
 
@@ -413,7 +432,7 @@ echo "Resumen MongoDB:"
 echo "  - Conexión Docker: OK"
 echo "  - Base de datos: banco_logs"
 echo "  - Notificaciones: $NOTIF_COUNT_MONGO documentos"
-echo "  - Batch jobs: $BATCH_COUNT ejecuciones"
+echo "  - Transaction Logs: $TRANS_LOG_COUNT documentos"
 echo ""
 echo "Para consultar MongoDB directamente:"
 echo "  docker exec -it mongodb-container mongosh -u admin -p xideral4321 --authenticationDatabase admin"

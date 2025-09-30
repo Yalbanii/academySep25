@@ -6,6 +6,9 @@ import com.xideral.banco.batch.dto.AccountInterestData;
 import com.xideral.banco.batch.interest.InterestCalculator;
 import com.xideral.banco.batch.interest.InterestCalculatorFactory;
 import com.xideral.banco.batch.listener.BatchJobExecutionMongoListener;
+import com.xideral.banco.customer.model.Customer;
+import com.xideral.banco.customer.repository.CustomerRepository;
+import com.xideral.banco.events.InterestAppliedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -18,7 +21,9 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.batch.item.data.builder.RepositoryItemReaderBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Sort;
@@ -28,13 +33,14 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Configuración de Spring Batch para el procesamiento mensual de intereses.
  *
  * Job: monthlyInterestJob
- * Step 1: calculateInterestStep - Lee cuentas, calcula intereses
- * Step 2: applyInterestStep - Aplica intereses a las cuentas
+ * Step 1: calculateAndApplyInterestStep - Lee cuentas, calcula y aplica intereses
+ * Step 2: publishEventsStep - Publica eventos para logs en MongoDB
  */
 @Slf4j
 @Configuration
@@ -45,24 +51,35 @@ public class MonthlyInterestBatchConfig {
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
     private final AccountRepository accountRepository;
+    private final CustomerRepository customerRepository;
     private final InterestCalculatorFactory calculatorFactory;
-    private final BatchJobExecutionMongoListener batchJobExecutionMongoListener;
+    private final ApplicationEventPublisher eventPublisher;
+
+    @Autowired(required = false)
+    private BatchJobExecutionMongoListener batchJobExecutionMongoListener;
 
     // ========== JOB DEFINITION ==========
 
     @Bean
     public Job monthlyInterestJob() {
-        return new JobBuilder("monthlyInterestJob", jobRepository)
-                .listener(batchJobExecutionMongoListener)
-                .start(calculateInterestStep())
+        JobBuilder jobBuilder = new JobBuilder("monthlyInterestJob", jobRepository);
+
+        // Only add MongoDB listener if available
+        if (batchJobExecutionMongoListener != null) {
+            jobBuilder.listener(batchJobExecutionMongoListener);
+        }
+
+        return jobBuilder
+                .start(calculateAndApplyInterestStep())
+                .next(publishEventsStep())
                 .build();
     }
 
-    // ========== STEP 1: CALCULATE INTEREST ==========
+    // ========== STEP 1: CALCULATE AND APPLY INTEREST ==========
 
     @Bean
-    public Step calculateInterestStep() {
-        return new StepBuilder("calculateInterestStep", jobRepository)
+    public Step calculateAndApplyInterestStep() {
+        return new StepBuilder("calculateAndApplyInterestStep", jobRepository)
                 .<Account, AccountInterestData>chunk(10, transactionManager)
                 .reader(accountReader())
                 .processor(interestCalculatorProcessor())
@@ -76,7 +93,6 @@ public class MonthlyInterestBatchConfig {
                 .name("accountReader")
                 .repository(accountRepository)
                 .methodName("findByActive")
-                .arguments(List.of(true))
                 .sorts(Collections.singletonMap("id", Sort.Direction.ASC))
                 .pageSize(10)
                 .build();
@@ -125,7 +141,8 @@ public class MonthlyInterestBatchConfig {
                             .orElseThrow(() -> new IllegalArgumentException(
                                     "Account not found: " + data.getAccountId()));
 
-                    BigDecimal newBalance = account.getBalance().add(data.getCalculatedInterest());
+                    BigDecimal previousBalance = account.getBalance();
+                    BigDecimal newBalance = previousBalance.add(data.getCalculatedInterest());
                     account.setBalance(newBalance);
                     account.setUpdatedAt(LocalDateTime.now());
 
@@ -136,8 +153,36 @@ public class MonthlyInterestBatchConfig {
                             data.getCalculatedInterest(),
                             data.getOriginalBalance(),
                             newBalance);
+
+                    // Publicar evento para auditoría
+                    Customer customer = customerRepository.findById(account.getCustomerId()).orElse(null);
+                    if (customer != null) {
+                        InterestAppliedEvent event = new InterestAppliedEvent(
+                                account.getAccountNumber(),
+                                account.getAccountType().toString(),
+                                data.getCalculatedInterest(),
+                                previousBalance,
+                                newBalance,
+                                customer.getEmail(),
+                                LocalDateTime.now()
+                        );
+                        eventPublisher.publishEvent(event);
+                        log.debug("InterestAppliedEvent published for account: {}", account.getAccountNumber());
+                    }
                 }
             }
         };
+    }
+
+    // ========== STEP 2: PUBLISH EVENTS FOR MONGO LOGS ==========
+
+    @Bean
+    public Step publishEventsStep() {
+        return new StepBuilder("publishEventsStep", jobRepository)
+                .tasklet((contribution, chunkContext) -> {
+                    log.info("✅ Step 2: Events published successfully. MongoDB logs created via event listeners.");
+                    return org.springframework.batch.repeat.RepeatStatus.FINISHED;
+                }, transactionManager)
+                .build();
     }
 }
