@@ -371,6 +371,103 @@ curl -X DELETE http://localhost:8080/api/notifications/674e5a1c3f2a4b0012345678
 
 ---
 
+## 📜 Día 4: Transaction Log System
+
+### 1. Obtener Todos los Transaction Logs
+```bash
+curl http://localhost:8080/api/transaction-logs | jq .
+```
+
+### 2. Transaction Logs por Cuenta
+```bash
+# Reemplaza con número de cuenta real
+curl http://localhost:8080/api/transaction-logs/account/400012345678 | jq .
+```
+
+### 3. Transaction Logs por Tipo de Transacción
+```bash
+# DEPOSIT
+curl http://localhost:8080/api/transaction-logs/transaction-type/DEPOSIT | jq .
+
+# WITHDRAWAL
+curl http://localhost:8080/api/transaction-logs/transaction-type/WITHDRAWAL | jq .
+
+# TRANSFER
+curl http://localhost:8080/api/transaction-logs/transaction-type/TRANSFER | jq .
+
+# INTEREST
+curl http://localhost:8080/api/transaction-logs/transaction-type/INTEREST | jq .
+```
+
+### 4. Transaction Logs por Cliente
+```bash
+curl http://localhost:8080/api/transaction-logs/customer/1 | jq .
+```
+
+### 5. Transaction Logs por Estado
+```bash
+# SUCCESS
+curl http://localhost:8080/api/transaction-logs/status/SUCCESS | jq .
+
+# FAILED
+curl http://localhost:8080/api/transaction-logs/status/FAILED | jq .
+```
+
+### 6. Transaction Logs por Rango de Fechas
+```bash
+# Formato: YYYY-MM-DD
+curl "http://localhost:8080/api/transaction-logs/date-range?startDate=2025-09-01&endDate=2025-09-30" | jq .
+```
+
+### 7. Transaction Logs por Rango de Montos
+```bash
+# Transacciones entre $100 y $1000
+curl "http://localhost:8080/api/transaction-logs/amount-range?minAmount=100&maxAmount=1000" | jq .
+```
+
+### 8. Contar Transaction Logs
+```bash
+# Por tipo
+curl http://localhost:8080/api/transaction-logs/count/transaction-type/DEPOSIT
+
+# Por estado
+curl http://localhost:8080/api/transaction-logs/count/status/SUCCESS
+
+# Por cuenta
+curl http://localhost:8080/api/transaction-logs/count/account/400012345678
+```
+
+### 9. Obtener Transaction Log por ID
+```bash
+# Reemplaza {id} con el ID real de MongoDB (ObjectId)
+curl http://localhost:8080/api/transaction-logs/674e5a1c3f2a4b0012345678 | jq .
+```
+
+### 10. Verificar Transaction Logs en MongoDB Directamente
+```bash
+# Ver todos los transaction logs
+docker exec mongodb-container mongosh \
+  -u admin -p xideral4321 --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.transactionLogs.find().pretty()"
+
+# Contar transaction logs
+docker exec mongodb-container mongosh \
+  -u admin -p xideral4321 --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.transactionLogs.countDocuments()"
+
+# Ver últimos 5 transaction logs
+docker exec mongodb-container mongosh \
+  -u admin -p xideral4321 --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.transactionLogs.find().sort({timestamp: -1}).limit(5).pretty()"
+
+# Estadísticas por tipo de transacción
+docker exec mongodb-container mongosh \
+  -u admin -p xideral4321 --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.transactionLogs.aggregate([{\$group: {_id: '\$transactionType', count: {\$sum: 1}, totalAmount: {\$sum: {\$toDouble: '\$amount'}}}}, {\$sort: {count: -1}}])"
+```
+
+---
+
 ## 📊 Consultas Útiles
 
 ### Ver Resumen de Cuentas
