@@ -27,7 +27,7 @@ public class CheckingInterestCalculator implements InterestCalculator {
             );
         }
 
-        if (!account.isActive()) {
+        if (account.getStatus() != Account.AccountStatus.ACTIVE) {
             return BigDecimal.ZERO;
         }
 

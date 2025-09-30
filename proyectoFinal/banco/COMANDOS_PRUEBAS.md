@@ -1,5 +1,5 @@
 # Comandos de Pruebas Manuales
-## Sistema Bancario Digital - Días 1 al 4
+## Sistema Bancario Digital - Días 1 al 5
 
 Este archivo contiene todos los comandos `curl` que puedes ejecutar manualmente para probar el sistema.
 
@@ -445,6 +445,224 @@ curl http://localhost:8080/api/notifications/type/TRANSFER_RECEIVED | jq '.[-1]'
 
 ---
 
+## 🔄 Día 5: Spring Batch - Monthly Interest Processing
+
+### 1. Ejecutar Batch Job Manualmente
+
+**Trigger el job:**
+```bash
+curl -X POST http://localhost:8080/api/batch/monthly-interest | jq .
+```
+
+**Respuesta esperada:**
+```json
+{
+  "message": "Monthly Interest Job triggered successfully",
+  "timestamp": "2025-09-30T03:45:23.456",
+  "status": "RUNNING"
+}
+```
+
+---
+
+### 2. Verificar Balances Antes y Después del Batch
+
+**Obtener balance de una cuenta ANTES del batch:**
+```bash
+ACCOUNT_NUMBER="400045427676"
+curl http://localhost:8080/api/accounts/$ACCOUNT_NUMBER | jq '{accountNumber, accountType, balance}'
+```
+
+**Ejecutar batch:**
+```bash
+curl -X POST http://localhost:8080/api/batch/monthly-interest
+```
+
+**Esperar 3 segundos y verificar balance DESPUÉS:**
+```bash
+sleep 3
+curl http://localhost:8080/api/accounts/$ACCOUNT_NUMBER | jq '{accountNumber, accountType, balance}'
+```
+
+**Ejemplo de resultado:**
+```
+ANTES:  {"accountNumber": "400045427676", "accountType": "CHECKING", "balance": 150.00}
+DESPUÉS: {"accountNumber": "400045427676", "accountType": "CHECKING", "balance": 150.12}
+INTERÉS: $0.12 (0.083% mensual)
+```
+
+---
+
+### 3. Cálculos de Intereses por Tipo de Cuenta
+
+**CHECKING (1% anual = 0.083% mensual):**
+```bash
+# Para balance de $10,000.00
+# Interés mensual: $10,000.00 × 0.000833333 = $8.33
+```
+
+**SAVINGS (5% anual = 0.42% mensual):**
+```bash
+# Para balance de $10,000.00
+# Interés mensual: $10,000.00 × 0.004166667 = $41.67
+```
+
+**Fórmula:**
+```
+Interés Mensual = Balance × (Tasa Anual / 12 / 100)
+
+CHECKING: Balance × 0.000833333
+SAVINGS:  Balance × 0.004166667
+```
+
+---
+
+### 4. Verificar Logs de Batch en MongoDB
+
+**Ver todos los logs de ejecución:**
+```bash
+docker exec -it mongodb-container mongosh \
+  -u admin -p xideral4321 --authenticationDatabase admin \
+  --eval 'use banco_logs' \
+  --eval 'db.batch_job_execution_logs.find().pretty()'
+```
+
+**Contar ejecuciones:**
+```bash
+docker exec -it mongodb-container mongosh \
+  -u admin -p xideral4321 --authenticationDatabase admin \
+  --eval 'use banco_logs' \
+  --eval 'db.batch_job_execution_logs.countDocuments()'
+```
+
+**Ver última ejecución:**
+```bash
+docker exec -it mongodb-container mongosh \
+  -u admin -p xideral4321 --authenticationDatabase admin \
+  --eval 'use banco_logs' \
+  --eval 'db.batch_job_execution_logs.find().sort({createdAt: -1}).limit(1).pretty()'
+```
+
+**Respuesta esperada:**
+```json
+{
+  "_id": ObjectId("66fa8c5b7f4e2a1b3c9d8e7f"),
+  "jobExecutionId": 1,
+  "jobName": "monthlyInterestJob",
+  "status": "COMPLETED",
+  "startTime": "2025-09-30T03:45:23.500Z",
+  "endTime": "2025-09-30T03:45:23.589Z",
+  "duration": 89,
+  "totalAccounts": 2,
+  "accountsWithInterest": 2,
+  "totalInterest": "0.75",
+  "errorMessage": null
+}
+```
+
+---
+
+### 5. Ver Spring Batch Metadata en MySQL
+
+**Verificar tablas de Spring Batch:**
+```bash
+mysql -u root -pxideral1234 banco_db -e "SHOW TABLES LIKE 'BATCH%';"
+```
+
+**Ver ejecuciones de jobs:**
+```bash
+mysql -u root -pxideral1234 banco_db -e "SELECT * FROM BATCH_JOB_EXECUTION ORDER BY CREATE_TIME DESC LIMIT 5;"
+```
+
+**Ver parámetros del job:**
+```bash
+mysql -u root -pxideral1234 banco_db -e "SELECT * FROM BATCH_JOB_EXECUTION_PARAMS ORDER BY JOB_EXECUTION_ID DESC;"
+```
+
+---
+
+### 6. Escenarios de Prueba
+
+#### Escenario 1: Batch con 2 Cuentas
+
+```bash
+# 1. Verificar que existen cuentas activas
+curl http://localhost:8080/api/accounts | jq '[.[] | select(.active == true) | {accountNumber, accountType, balance}]'
+
+# 2. Ejecutar batch
+curl -X POST http://localhost:8080/api/batch/monthly-interest | jq .
+
+# 3. Esperar y verificar
+sleep 3
+curl http://localhost:8080/api/accounts | jq '[.[] | {accountNumber, accountType, balance}]'
+```
+
+#### Escenario 2: Ejecutar Batch Múltiples Veces
+
+```bash
+# Primera ejecución
+curl -X POST http://localhost:8080/api/batch/monthly-interest | jq .
+sleep 3
+
+# Segunda ejecución (aplicará interés sobre nuevo balance)
+curl -X POST http://localhost:8080/api/batch/monthly-interest | jq .
+sleep 3
+
+# Tercera ejecución (interés compuesto)
+curl -X POST http://localhost:8080/api/batch/monthly-interest | jq .
+```
+
+**Nota:** Cada ejecución aplica interés sobre el balance actual, creando interés compuesto.
+
+#### Escenario 3: Validar Polimorfismo
+
+```bash
+# 1. Crear cuenta CHECKING con $1,000
+CHECKING=$(curl -s -X POST http://localhost:8080/api/customers/1/accounts \
+  -H "Content-Type: application/json" \
+  -d '{"accountType": "CHECKING","balance": 1000.00}')
+CHECKING_NUM=$(echo $CHECKING | jq -r '.accountNumber')
+
+# 2. Depositar $1,000 (total: $1,000)
+curl -X POST http://localhost:8080/api/accounts/deposit \
+  -H "Content-Type: application/json" \
+  -d "{\"accountNumber\": \"$CHECKING_NUM\",\"amount\": 1000.00}"
+
+# 3. Crear cuenta SAVINGS con $1,000
+SAVINGS=$(curl -s -X POST http://localhost:8080/api/customers/1/accounts \
+  -H "Content-Type: application/json" \
+  -d '{"accountType": "SAVINGS","balance": 1000.00}')
+SAVINGS_NUM=$(echo $SAVINGS | jq -r '.accountNumber')
+
+# 4. Depositar $1,000 (total: $1,000)
+curl -X POST http://localhost:8080/api/accounts/deposit \
+  -H "Content-Type: application/json" \
+  -d "{\"accountNumber\": \"$SAVINGS_NUM\",\"amount\": 1000.00}"
+
+# 5. Ver balances antes
+echo "CHECKING antes:"
+curl -s http://localhost:8080/api/accounts/$CHECKING_NUM | jq '.balance'
+echo "SAVINGS antes:"
+curl -s http://localhost:8080/api/accounts/$SAVINGS_NUM | jq '.balance'
+
+# 6. Ejecutar batch
+curl -X POST http://localhost:8080/api/batch/monthly-interest
+sleep 3
+
+# 7. Ver balances después
+echo "CHECKING después (1% anual):"
+curl -s http://localhost:8080/api/accounts/$CHECKING_NUM | jq '.balance'
+# Esperado: $1000.83 (interés: $0.83)
+
+echo "SAVINGS después (5% anual):"
+curl -s http://localhost:8080/api/accounts/$SAVINGS_NUM | jq '.balance'
+# Esperado: $1004.17 (interés: $4.17)
+```
+
+**Observación:** SAVINGS recibe 5x más interés que CHECKING, demostrando el polimorfismo.
+
+---
+
 ## 🔍 Verificación de MongoDB
 
 ### Ver notificaciones directamente en MongoDB
@@ -458,6 +676,10 @@ db.notifications.find().pretty()
 db.notifications.countDocuments()
 db.notifications.find({status: "SENT"}).count()
 db.notifications.find({type: "DEPOSIT"}).pretty()
+
+# Ver logs de batch
+db.batch_job_execution_logs.find().pretty()
+db.batch_job_execution_logs.find({status: "COMPLETED"}).count()
 ```
 
 ---
@@ -480,6 +702,245 @@ Para ejecutar todas las pruebas automáticamente:
 ```bash
 ./run-integration-tests.sh
 ```
+
+---
+
+## 🗄️ Verificación Directa de MongoDB con Docker
+
+### Conectarse a MongoDB mediante Docker
+
+**Conexión interactiva:**
+```bash
+docker exec -it mongodb-container mongosh \
+  -u admin -p xideral4321 --authenticationDatabase admin
+```
+
+**Dentro de mongosh:**
+```javascript
+// Cambiar a la base de datos banco_logs
+use banco_logs
+
+// Ver colecciones
+show collections
+
+// Contar notificaciones
+db.notifications.countDocuments()
+
+// Ver últimas 5 notificaciones
+db.notifications.find().sort({createdAt:-1}).limit(5).pretty()
+
+// Ver notificaciones por tipo
+db.notifications.find({type: "DEPOSIT"}).pretty()
+
+// Ver notificaciones por estado
+db.notifications.find({status: "SENT"}).count()
+
+// Ver estadísticas por tipo
+db.notifications.aggregate([
+  {$group: {_id: "$type", count: {$sum: 1}}},
+  {$sort: {count: -1}}
+])
+
+// Ver logs de batch jobs
+db.batch_job_executions.find().pretty()
+
+// Ver último batch ejecutado
+db.batch_job_executions.find().sort({startTime:-1}).limit(1).pretty()
+
+// Contar ejecuciones de batch
+db.batch_job_executions.countDocuments()
+
+// Ver batch jobs completados
+db.batch_job_executions.find({status: "COMPLETED"}).pretty()
+
+// Ver batch jobs fallidos
+db.batch_job_executions.find({status: "FAILED"}).pretty()
+
+// Salir
+exit
+```
+
+---
+
+### Comandos Docker No Interactivos
+
+**Ver todas las bases de datos:**
+```bash
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin \
+  --eval "db.adminCommand('listDatabases')"
+```
+
+**Contar notificaciones:**
+```bash
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.notifications.countDocuments()"
+```
+
+**Ver últimas notificaciones:**
+```bash
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.notifications.find().sort({createdAt:-1}).limit(3).pretty()"
+```
+
+**Estadísticas de notificaciones por tipo:**
+```bash
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.notifications.aggregate([{\$group: {_id: '\$type', count: {\$sum: 1}}}, {\$sort: {count: -1}}])"
+```
+
+**Ver logs de batch jobs:**
+```bash
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.batch_job_executions.find().pretty()"
+```
+
+**Ver último batch job ejecutado:**
+```bash
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.batch_job_executions.find().sort({startTime:-1}).limit(1).pretty()"
+```
+
+**Contar batch jobs:**
+```bash
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.batch_job_executions.countDocuments()"
+```
+
+**Ver notificaciones de un cliente específico:**
+```bash
+# Reemplaza 5 con el ID del cliente
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.notifications.find({customerId: 5}).pretty()"
+```
+
+**Ver notificaciones de una cuenta específica:**
+```bash
+# Reemplaza con el número de cuenta real
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.notifications.find({accountNumber: '400084675118'}).pretty()"
+```
+
+**Eliminar todas las notificaciones (CUIDADO):**
+```bash
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.notifications.deleteMany({})"
+```
+
+**Eliminar todos los logs de batch (CUIDADO):**
+```bash
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin \
+  --eval "db = db.getSiblingDB('banco_logs'); db.batch_job_executions.deleteMany({})"
+```
+
+---
+
+### Gestión del Contenedor Docker
+
+**Ver estado del contenedor:**
+```bash
+docker ps --filter "name=mongodb-container"
+```
+
+**Detener el contenedor:**
+```bash
+docker stop mongodb-container
+```
+
+**Iniciar el contenedor:**
+```bash
+docker start mongodb-container
+```
+
+**Ver logs del contenedor:**
+```bash
+docker logs mongodb-container
+docker logs -f mongodb-container  # Seguir logs en tiempo real
+```
+
+**Reiniciar el contenedor:**
+```bash
+docker restart mongodb-container
+```
+
+**Eliminar el contenedor (CUIDADO - perderás los datos):**
+```bash
+docker rm -f mongodb-container
+```
+
+**Ver estadísticas del contenedor:**
+```bash
+docker stats mongodb-container
+```
+
+---
+
+### Escenario Completo: Validar MongoDB End-to-End
+
+```bash
+echo "=== PRUEBA COMPLETA DE MONGODB ==="
+
+# 1. Verificar conexión
+echo "1. Verificando conexión a MongoDB..."
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin \
+  --eval "db.adminCommand('ping')"
+
+# 2. Contar notificaciones antes
+BEFORE=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin --quiet \
+  --eval "db = db.getSiblingDB('banco_logs'); db.notifications.countDocuments()")
+echo "2. Notificaciones antes: $BEFORE"
+
+# 3. Crear cliente y cuenta
+echo "3. Creando cliente y cuenta..."
+CUSTOMER=$(curl -s -X POST http://localhost:8080/api/customers \
+  -H "Content-Type: application/json" \
+  -d '{"name":"MongoDB Test","email":"mongo@test.com","phone":"5555555555"}')
+CUSTOMER_ID=$(echo $CUSTOMER | jq -r '.id')
+
+ACCOUNT=$(curl -s -X POST http://localhost:8080/api/accounts \
+  -H "Content-Type: application/json" \
+  -d "{\"customerId\": $CUSTOMER_ID,\"accountType\": \"CHECKING\"}")
+ACCOUNT_NUMBER=$(echo $ACCOUNT | jq -r '.accountNumber')
+
+# 4. Hacer depósito
+echo "4. Realizando depósito..."
+curl -s -X POST http://localhost:8080/api/accounts/deposit \
+  -H "Content-Type: application/json" \
+  -d "{\"accountNumber\": \"$ACCOUNT_NUMBER\",\"amount\": 1000.00}" > /dev/null
+
+# 5. Esperar y contar notificaciones después
+sleep 2
+AFTER=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin --quiet \
+  --eval "db = db.getSiblingDB('banco_logs'); db.notifications.countDocuments()")
+echo "5. Notificaciones después: $AFTER"
+
+# 6. Calcular diferencia
+DIFF=$((AFTER - BEFORE))
+echo "6. Nuevas notificaciones generadas: $DIFF"
+
+# 7. Ver últimas notificaciones
+echo "7. Últimas notificaciones:"
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin --quiet \
+  --eval "db = db.getSiblingDB('banco_logs'); db.notifications.find({customerId: $CUSTOMER_ID}).forEach(n => print('   - ' + n.type + ': ' + n.subject))"
+
+echo "=== PRUEBA COMPLETADA ==="
+```
+
+---
 
 **Academia Xideral - FullStack Development Course**
 **Proyecto Final - Sistema Bancario Digital**

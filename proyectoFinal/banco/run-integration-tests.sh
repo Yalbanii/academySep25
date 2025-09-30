@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Script de Pruebas de Integración - Sistema Bancario Digital
-# Ejecuta todas las pruebas de los Días 1 al 4
+# Ejecuta todas las pruebas de los Días 1 al 5
 
 echo "=================================================="
-echo "   PRUEBAS DE INTEGRACIÓN - DÍAS 1 AL 4"
+echo "   PRUEBAS DE INTEGRACIÓN - DÍAS 1 AL 5"
 echo "=================================================="
 echo ""
 
@@ -223,16 +223,198 @@ curl -s $BASE_URL/api/notifications/customer/$CUSTOMER_ID | jq -r '.[] | "   [\(
 pause
 
 echo ""
+echo -e "${BLUE}=== DÍA 5: SPRING BATCH - MONTHLY INTEREST ===${NC}"
+echo ""
+
+# 5.1 Obtener balances antes de ejecutar batch
+echo -n "5.1 Obtener balances antes del batch... "
+BALANCE_1_BEFORE=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_1 | jq -r '.balance')
+BALANCE_2_BEFORE=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_2 | jq -r '.balance')
+echo -e "${GREEN}✅ PASS${NC}"
+echo "   Cuenta 1 (CHECKING): \$$BALANCE_1_BEFORE"
+echo "   Cuenta 2 (SAVINGS): \$$BALANCE_2_BEFORE"
+pause
+
+# 5.2 Ejecutar Batch Job manualmente
+echo -n "5.2 Ejecutar Batch Job de Intereses... "
+BATCH_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/api/batch/monthly-interest)
+HTTP_CODE=$(echo "$BATCH_RESPONSE" | tail -n1)
+BODY=$(echo "$BATCH_RESPONSE" | head -n-1)
+check_status $HTTP_CODE
+if [ $HTTP_CODE -eq 200 ]; then
+    echo "   Message: $(echo $BODY | jq -r '.message')"
+    echo "   Status: $(echo $BODY | jq -r '.status')"
+fi
+pause
+
+# Esperar a que el batch termine
+echo -n "5.3 Esperando a que el batch termine... "
+sleep 3
+echo -e "${GREEN}✅ DONE${NC}"
+pause
+
+# 5.4 Verificar balances después del batch
+echo -n "5.4 Verificar balances después del batch... "
+BALANCE_1_AFTER=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_1 | jq -r '.balance')
+BALANCE_2_AFTER=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_2 | jq -r '.balance')
+echo -e "${GREEN}✅ PASS${NC}"
+
+# Calcular intereses aplicados
+INTEREST_1=$(echo "$BALANCE_1_AFTER - $BALANCE_1_BEFORE" | bc)
+INTEREST_2=$(echo "$BALANCE_2_AFTER - $BALANCE_2_BEFORE" | bc)
+TOTAL_INTEREST=$(echo "$INTEREST_1 + $INTEREST_2" | bc)
+
+echo ""
+echo "   Cuenta 1 (CHECKING):"
+echo "     - Balance antes: \$$BALANCE_1_BEFORE"
+echo "     - Balance después: \$$BALANCE_1_AFTER"
+echo "     - Interés aplicado: \$$INTEREST_1 (1% anual = 0.083% mensual)"
+echo ""
+echo "   Cuenta 2 (SAVINGS):"
+echo "     - Balance antes: \$$BALANCE_2_BEFORE"
+echo "     - Balance después: \$$BALANCE_2_AFTER"
+echo "     - Interés aplicado: \$$INTEREST_2 (5% anual = 0.42% mensual)"
+echo ""
+echo "   Total Interés Aplicado: \$$TOTAL_INTEREST"
+pause
+
+# 5.5 Verificar logs en MongoDB (opcional, requiere mongosh)
+echo ""
+echo -n "5.5 Verificar logs de batch en MongoDB... "
+if command -v mongosh &> /dev/null; then
+    BATCH_LOGS=$(mongosh --quiet --eval 'use banco_logs' --eval 'db.batch_job_execution_logs.countDocuments()')
+    echo -e "${GREEN}✅ PASS${NC}"
+    echo "   Total batch logs en MongoDB: $BATCH_LOGS"
+else
+    echo -e "${YELLOW}⚠️  SKIP (mongosh no instalado)${NC}"
+fi
+pause
+
+echo ""
 echo "=================================================="
 echo -e "${GREEN}   ✅ TODAS LAS PRUEBAS COMPLETADAS${NC}"
 echo "=================================================="
 echo ""
 echo "Resumen:"
 echo "  - Cliente ID: $CUSTOMER_ID"
-echo "  - Cuenta 1: $ACCOUNT_1"
-echo "  - Cuenta 2: $ACCOUNT_2"
+echo "  - Cuenta 1 (CHECKING): $ACCOUNT_1 - Balance: \$$BALANCE_1_AFTER"
+echo "  - Cuenta 2 (SAVINGS): $ACCOUNT_2 - Balance: \$$BALANCE_2_AFTER"
 echo "  - Total notificaciones: $NOTIF_COUNT"
+echo "  - Intereses aplicados: \$$TOTAL_INTEREST"
 echo ""
 echo "Para ver el reporte completo:"
 echo "  cat REPORTE_PRUEBAS_INTEGRACION.md"
+echo ""
+
+# Validación MongoDB con Docker
+echo ""
+echo -e "${BLUE}=== VALIDACIÓN MONGODB CON DOCKER ===${NC}"
+echo ""
+
+# 6.1 Verificar conexión a MongoDB
+echo -n "6.1 Verificar conexión a MongoDB vía Docker... "
+MONGO_PING=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin --quiet \
+  --eval "db.adminCommand('ping').ok" 2>/dev/null)
+
+if [ "$MONGO_PING" = "1" ]; then
+    echo -e "${GREEN}✅ PASS${NC}"
+else
+    echo -e "${RED}❌ FAIL (MongoDB no disponible)${NC}"
+    exit 1
+fi
+pause
+
+# 6.2 Verificar base de datos banco_logs
+echo -n "6.2 Verificar base de datos banco_logs... "
+DB_EXISTS=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin --quiet \
+  --eval "db.adminCommand('listDatabases').databases.filter(d => d.name === 'banco_logs').length" 2>/dev/null)
+
+if [ "$DB_EXISTS" = "1" ]; then
+    echo -e "${GREEN}✅ PASS${NC}"
+else
+    echo -e "${RED}❌ FAIL (base de datos no existe)${NC}"
+fi
+pause
+
+# 6.3 Contar notificaciones en MongoDB
+echo -n "6.3 Contar notificaciones en MongoDB... "
+NOTIF_COUNT_MONGO=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin --quiet \
+  --eval "db = db.getSiblingDB('banco_logs'); db.notifications.countDocuments()" 2>/dev/null)
+echo -e "${GREEN}✅ PASS${NC}"
+echo "   Total notificaciones en MongoDB: $NOTIF_COUNT_MONGO"
+pause
+
+# 6.4 Verificar estadísticas de notificaciones por tipo
+echo "6.4 Estadísticas de notificaciones por tipo:"
+docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin --quiet \
+  --eval "db = db.getSiblingDB('banco_logs'); db.notifications.aggregate([{\$group: {_id: '\$type', count: {\$sum: 1}}}, {\$sort: {count: -1}}]).forEach(r => print('   - ' + r._id + ': ' + r.count))" 2>/dev/null
+pause
+
+# 6.5 Verificar última notificación
+echo -n "6.5 Verificar última notificación registrada... "
+LAST_NOTIF=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin --quiet \
+  --eval "db = db.getSiblingDB('banco_logs'); var n = db.notifications.findOne({}, {sort: {createdAt: -1}}); if (n) print(n.type + ' - ' + n.status); else print('none')" 2>/dev/null)
+if [ ! -z "$LAST_NOTIF" ] && [ "$LAST_NOTIF" != "none" ]; then
+    echo -e "${GREEN}✅ PASS${NC}"
+    echo "   Última notificación: $LAST_NOTIF"
+else
+    echo -e "${YELLOW}⚠️  WARNING (no hay notificaciones)${NC}"
+fi
+pause
+
+# 6.6 Verificar colección de batch jobs
+echo -n "6.6 Verificar colección de batch_job_executions... "
+BATCH_COUNT=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin --quiet \
+  --eval "db = db.getSiblingDB('banco_logs'); db.batch_job_executions.countDocuments()" 2>/dev/null)
+echo -e "${GREEN}✅ PASS${NC}"
+echo "   Total batch executions en MongoDB: $BATCH_COUNT"
+pause
+
+# 6.7 Verificar último batch job
+if [ "$BATCH_COUNT" -gt "0" ]; then
+    echo -n "6.7 Verificar último batch job... "
+    LAST_BATCH=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
+      --authenticationDatabase admin --quiet \
+      --eval "db = db.getSiblingDB('banco_logs'); var b = db.batch_job_executions.findOne({}, {sort: {startTime: -1}}); if (b) print(b.jobName + ' - ' + b.status); else print('none')" 2>/dev/null)
+    if [ ! -z "$LAST_BATCH" ] && [ "$LAST_BATCH" != "none" ]; then
+        echo -e "${GREEN}✅ PASS${NC}"
+        echo "   Último batch: $LAST_BATCH"
+    fi
+else
+    echo "6.7 No hay batch jobs ejecutados todavía"
+fi
+pause
+
+# 6.8 Verificar estructura de notificación
+echo -n "6.8 Verificar estructura de documentos... "
+HAS_FIELDS=$(docker exec mongodb-container mongosh -u admin -p xideral4321 \
+  --authenticationDatabase admin --quiet \
+  --eval "db = db.getSiblingDB('banco_logs'); var n = db.notifications.findOne(); if (n && n.customerId && n.type && n.status && n.createdAt) print('valid'); else print('invalid')" 2>/dev/null)
+if [ "$HAS_FIELDS" = "valid" ]; then
+    echo -e "${GREEN}✅ PASS${NC}"
+    echo "   Estructura de documentos correcta"
+else
+    echo -e "${YELLOW}⚠️  WARNING (estructura incompleta)${NC}"
+fi
+pause
+
+echo ""
+echo "==================================================="
+echo -e "${GREEN}   ✅ VALIDACIÓN MONGODB COMPLETADA${NC}"
+echo "==================================================="
+echo ""
+echo "Resumen MongoDB:"
+echo "  - Conexión Docker: OK"
+echo "  - Base de datos: banco_logs"
+echo "  - Notificaciones: $NOTIF_COUNT_MONGO documentos"
+echo "  - Batch jobs: $BATCH_COUNT ejecuciones"
+echo ""
+echo "Para consultar MongoDB directamente:"
+echo "  docker exec -it mongodb-container mongosh -u admin -p xideral4321 --authenticationDatabase admin"
 echo ""

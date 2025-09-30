@@ -11,7 +11,8 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
     "com.xideral.banco.account.repository"
 })
 @EnableMongoRepositories(basePackages = {
-    "com.xideral.banco.notification.repository"
+    "com.xideral.banco.notification.repository",
+    "com.xideral.banco.batch.repository"
 })
 public class BancoApplication {
 
