@@ -223,8 +223,6 @@ echo "$WITHDRAW_RESPONSE" | jq .
 
 ```
 
-
-
 **🔔 Verifica la notificación de retiro:**
 ```bash
 curl http://localhost:8080/api/notifications/type/WITHDRAWAL | jq .
@@ -234,11 +232,15 @@ curl http://localhost:8080/api/notifications/type/WITHDRAWAL | jq .
 
 **Transferir $250 entre cuentas:**
 ```bash
+export ACCOUNT_CHECKING="400090752141"
+export ACCOUNT_SAVINGS="400053095316"
+
 TRANSFER_PAYLOAD=$(jq -n \
   --arg fromAccountNumber "$ACCOUNT_CHECKING" \
   --arg toAccountNumber "$ACCOUNT_SAVINGS" \
   --argjson amount 250.00 \
   '{fromAccountNumber: $fromAccountNumber, toAccountNumber: $toAccountNumber, amount: $amount}')
+
 curl -X POST http://localhost:8080/api/accounts/transfer \
   -H "Content-Type: application/json" \
   -d "$TRANSFER_PAYLOAD"
