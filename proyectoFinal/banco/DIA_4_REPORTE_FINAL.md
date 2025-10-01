@@ -54,6 +54,7 @@ Según el documento de requerimientos (líneas 112-118):
 ┌─────────────────────┐         │                     │
 │  Account Service    │ publish │                     │
 │  ─────────────────  │────────>│                     │
+│  - createAccount()  │         │                     │
 │  - deposit()        │         │                     │
 │  - withdraw()       │         │                     │
 │  - transfer()       │         │                     │

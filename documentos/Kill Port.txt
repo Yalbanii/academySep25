@@ -1,0 +1,15 @@
+Kill Port
+
+To kill a process running on port 8080 on a Mac, follow these steps in your Terminal: Find the Process ID (PID).
+Use the lsof command to list open files and processes. The -i flag specifies internet connections, and :8080 targets the specific port. Using sudo might be necessary to view all processes.
+Code
+
+    sudo lsof -i :8080
+
+This command will output information about the process(es) using port 8080, including their PID. Look for the number under the "PID" column. kill the process.
+Once you have the PID of the process you want to terminate, use the kill command. The -9 flag ensures a forceful termination.
+Code
+
+    kill -9 <PID>
+
+Replace <PID> with the actual process ID you found in the previous step.

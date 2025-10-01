@@ -515,8 +515,9 @@ curl -s http://localhost:8080/api/accounts/customer/$CUSTOMER_ID | \
 # 1. Crear cliente
 CUSTOMER=$(curl -s -X POST http://localhost:8080/api/customers \
   -H "Content-Type: application/json" \
-  -d '{"name": "Pedro López","email": "pedro@example.com","phone": "5551234567"}')
+  -d '{"name": "Tercio López","email": "tercio@example.com","phone": "5551234567"}')
 CUSTOMER_ID=$(echo $CUSTOMER | jq -r '.id')
+echo $CUSTOMER_ID
 
 # 2. Crear cuenta
 ACCOUNT=$(curl -s -X POST http://localhost:8080/api/accounts \
@@ -530,7 +531,7 @@ curl http://localhost:8080/api/notifications/customer/$CUSTOMER_ID | jq .
 
 ### Escenario 2: Ciclo Completo de Transacciones
 ```bash
-ACCOUNT_NUMBER="400012345678"
+ACCOUNT_NUMBER="400087947135"
 
 # 1. Depósito inicial
 curl -X POST http://localhost:8080/api/accounts/deposit \
@@ -543,7 +544,7 @@ curl -X POST http://localhost:8080/api/accounts/withdraw \
   -d "{\"accountNumber\": \"$ACCOUNT_NUMBER\",\"amount\": 200.00}" | jq .
 
 # 3. Verificar balance final
-curl http://localhost:8080/api/accounts/$ACCOUNT_NUMBER | jq '{accountNumber, balance}'
+curl http://localhost:8080/api/accounts/number/$ACCOUNT_NUMBER | jq '{accountNumber, balance}'
 
 # 4. Ver todas las notificaciones generadas
 curl http://localhost:8080/api/notifications/account/$ACCOUNT_NUMBER | jq .
@@ -551,14 +552,14 @@ curl http://localhost:8080/api/notifications/account/$ACCOUNT_NUMBER | jq .
 
 ### Escenario 3: Transferencia entre Cuentas
 ```bash
-ACCOUNT_FROM="400012345678"
-ACCOUNT_TO="400087654321"
+ACCOUNT_FROM="400087947135"
+ACCOUNT_TO="400039701907"
 
 # 1. Verificar balances iniciales
 echo "Balance cuenta origen:"
-curl -s http://localhost:8080/api/accounts/$ACCOUNT_FROM | jq '.balance'
+curl -s http://localhost:8080/api/accounts/number/$ACCOUNT_FROM | jq '.balance'
 echo "Balance cuenta destino:"
-curl -s http://localhost:8080/api/accounts/$ACCOUNT_TO | jq '.balance'
+curl -s http://localhost:8080/api/accounts/number/$ACCOUNT_TO | jq '.balance'
 
 # 2. Realizar transferencia
 curl -X POST http://localhost:8080/api/accounts/transfer \
@@ -566,14 +567,14 @@ curl -X POST http://localhost:8080/api/accounts/transfer \
   -d "{
     \"fromAccountNumber\": \"$ACCOUNT_FROM\",
     \"toAccountNumber\": \"$ACCOUNT_TO\",
-    \"amount\": 300.00
+    \"amount\": 100.00
   }"
 
 # 3. Verificar balances finales
 echo "Nuevo balance cuenta origen:"
-curl -s http://localhost:8080/api/accounts/$ACCOUNT_FROM | jq '.balance'
+curl -s http://localhost:8080/api/accounts/number/$ACCOUNT_FROM | jq '.balance'
 echo "Nuevo balance cuenta destino:"
-curl -s http://localhost:8080/api/accounts/$ACCOUNT_TO | jq '.balance'
+curl -s http://localhost:8080/api/accounts/number/$ACCOUNT_TO | jq '.balance'
 
 # 4. Ver notificaciones de transferencia
 curl http://localhost:8080/api/notifications/type/TRANSFER_SENT | jq '.[-1]'
