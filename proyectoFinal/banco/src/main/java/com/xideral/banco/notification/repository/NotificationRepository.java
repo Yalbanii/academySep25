@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
+@Profile("!test")
 public interface NotificationRepository extends MongoRepository<Notification, String> {
 
     // Derived query methods

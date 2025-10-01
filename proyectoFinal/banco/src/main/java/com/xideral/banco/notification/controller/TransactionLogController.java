@@ -19,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/transaction-logs")
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("!test")
 public class TransactionLogController {
 
     private final TransactionLogService transactionLogService;

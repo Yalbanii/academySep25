@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-@ConditionalOnBean(MongoTemplate.class)
+@org.springframework.context.annotation.Profile("!test")
 public interface TransactionLogRepository extends MongoRepository<TransactionLog, String> {
 
     List<TransactionLog> findByAccountNumber(String accountNumber);

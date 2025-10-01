@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @TestPropertySource(locations = "classpath:application-test.properties")
+@org.springframework.test.context.ActiveProfiles("test")
 @Transactional
 class CustomerRepositoryTest {
 

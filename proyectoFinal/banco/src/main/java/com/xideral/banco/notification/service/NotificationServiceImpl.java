@@ -21,6 +21,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Profile("!test")
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;

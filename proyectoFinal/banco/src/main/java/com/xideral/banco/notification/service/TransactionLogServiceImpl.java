@@ -18,6 +18,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("!test")
 public class TransactionLogServiceImpl implements TransactionLogService {
 
     private final TransactionLogRepository transactionLogRepository;

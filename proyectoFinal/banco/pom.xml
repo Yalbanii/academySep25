@@ -118,6 +118,18 @@
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.12</version>
 
+				<configuration>
+					<excludes>
+						<!-- Exclude Spring Batch configuration (requires MongoDB) -->
+						<exclude>com/xideral/banco/batch/config/**</exclude>
+						<!-- Exclude MongoDB controllers (not testable without MongoDB) -->
+						<exclude>com/xideral/banco/notification/controller/**</exclude>
+						<!-- Exclude batch listener (requires MongoDB) -->
+						<exclude>com/xideral/banco/batch/listener/**</exclude>
+						<!-- Exclude batch controller (requires MongoDB and Batch setup) -->
+						<exclude>com/xideral/banco/batch/controller/**</exclude>
+					</excludes>
+				</configuration>
 				<executions>
 					<execution>
 						<id>jacoco-prepare</id>

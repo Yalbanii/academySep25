@@ -359,4 +359,138 @@ class AccountServiceTest {
         assertThat(accounts).hasSize(2);
         verify(accountRepository).findByCustomerId(1L);
     }
+
+    @Test
+    void shouldCreateAccountWithNullBalanceDefaultingToZero() {
+        // Given - Test line 55: account with null balance
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(testCustomer));
+        when(accountRepository.existsByAccountNumber(anyString())).thenReturn(false);
+        when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> {
+            Account acc = invocation.getArgument(0);
+            acc.setId(1L);
+            return acc;
+        });
+
+        Account newAccount = new Account();
+        newAccount.setCustomerId(1L);
+        newAccount.setAccountType(Account.AccountType.SAVINGS);
+        newAccount.setBalance(null); // Explicitly set to null
+
+        // When
+        Account createdAccount = accountService.createAccount(newAccount);
+
+        // Then
+        assertThat(createdAccount.getBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+        verify(accountRepository).save(any(Account.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenAccountNumberNotFound() {
+        // Given - Test line 95: account not found by account number
+        when(accountRepository.findByAccountNumber("nonexistent")).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> accountService.getAccountByAccountNumber("nonexistent"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Account not found with number");
+
+        verify(accountRepository).findByAccountNumber("nonexistent");
+    }
+
+    @Test
+    void shouldGetAllAccounts() {
+        // Given
+        Account account2 = new Account();
+        account2.setId(2L);
+        account2.setAccountNumber("400087654321");
+        when(accountRepository.findAll()).thenReturn(Arrays.asList(testAccount, account2));
+
+        // When
+        List<Account> accounts = accountService.getAllAccounts();
+
+        // Then
+        assertThat(accounts).hasSize(2);
+        verify(accountRepository).findAll();
+    }
+
+    @Test
+    void shouldGetActiveAccountsByCustomerId() {
+        // Given
+        when(accountRepository.findActiveAccountsByCustomerId(1L)).thenReturn(Arrays.asList(testAccount));
+
+        // When
+        List<Account> accounts = accountService.getActiveAccountsByCustomerId(1L);
+
+        // Then
+        assertThat(accounts).hasSize(1);
+        assertThat(accounts.get(0).getStatus()).isEqualTo(Account.AccountStatus.ACTIVE);
+        verify(accountRepository).findActiveAccountsByCustomerId(1L);
+    }
+
+    @Test
+    void shouldUpdateAccount() {
+        // Given
+        when(accountRepository.findById(1L)).thenReturn(Optional.of(testAccount));
+        when(accountRepository.save(any(Account.class))).thenReturn(testAccount);
+
+        Account updates = new Account();
+        updates.setAccountType(Account.AccountType.SAVINGS);
+
+        // When
+        Account updatedAccount = accountService.updateAccount(1L, updates);
+
+        // Then
+        assertThat(updatedAccount.getAccountType()).isEqualTo(Account.AccountType.SAVINGS);
+        verify(accountRepository).save(testAccount);
+    }
+
+    @Test
+    void shouldDeleteAccountWithZeroBalance() {
+        // Given
+        testAccount.setBalance(BigDecimal.ZERO);
+        when(accountRepository.findById(1L)).thenReturn(Optional.of(testAccount));
+        when(accountRepository.save(any(Account.class))).thenReturn(testAccount);
+
+        // When
+        accountService.deleteAccount(1L);
+
+        // Then
+        assertThat(testAccount.getStatus()).isEqualTo(Account.AccountStatus.CLOSED);
+        verify(accountRepository).save(testAccount);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDeletingAccountWithNonZeroBalance() {
+        // Given
+        testAccount.setBalance(new BigDecimal("100.00"));
+        when(accountRepository.findById(1L)).thenReturn(Optional.of(testAccount));
+
+        // When & Then
+        assertThatThrownBy(() -> accountService.deleteAccount(1L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Cannot delete account with non-zero balance");
+    }
+
+    @Test
+    void shouldActivateAccount() {
+        // Given
+        testAccount.setStatus(Account.AccountStatus.CLOSED);
+        when(accountRepository.findById(1L)).thenReturn(Optional.of(testAccount));
+        when(accountRepository.save(any(Account.class))).thenReturn(testAccount);
+
+        // When
+        Account activatedAccount = accountService.activateAccount(1L);
+
+        // Then
+        assertThat(activatedAccount.getStatus()).isEqualTo(Account.AccountStatus.ACTIVE);
+        verify(accountRepository).save(testAccount);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDepositAmountIsNull() {
+        // When & Then
+        assertThatThrownBy(() -> accountService.deposit("400012345678", null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must be greater than zero");
+    }
 }
