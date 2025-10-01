@@ -40,6 +40,7 @@ public Account createAccount(AccountDTO dto) {
 **Problemas:**
 - ❌ Si Notification falla, Account también falla
 - ❌ Difícil de testear
+- ❌ Proceso síncrono, el que llama espera la respuesta
 - ❌ No se puede escalar independientemente
 - ❌ Cambios en un módulo afectan a otros
 
@@ -126,7 +127,7 @@ src/main/java/com/xideral/banco/
 │  │              │                          │                 │ │
 │  │ - Create     │  CustomerCreatedEvent    │ - Send Email    │ │
 │  │ - Update     │ ─────────────────────────→ - Create Log    │ │
-│  │ - Delete     │                          │                 │ │
+│  │ - Delete     │                          │    (MongoDb)    │ │
 │  └──────────────┘                          └─────────────────┘ │
 │         │                                          ↑            │
 │         │                                          │            │
