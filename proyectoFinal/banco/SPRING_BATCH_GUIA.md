@@ -77,18 +77,18 @@ public Job monthlyInterestJob() {
     }
 
     return jobBuilder
-            .start(calculateAndApplyInterestStep())    // PASO 1
-            .next(publishEventsStep())                 // PASO 2
+            .start(calculateAndApplyInterestStep())    // STEP 1
+            .next(publishEventsStep())                 // STEP 2
             .build();
 }
 ```
 
 **¿Qué hace?**
 - Define el **trabajo completo** llamado "monthlyInterestJob"
-- Ejecuta **2 pasos en secuencia**: primero calcula, luego notifica
+- Ejecuta **2 steps en secuencia**: primero calcula, luego notifica
 - Tiene un **listener** que guarda información de la ejecución en MongoDB
 
-**Analogía:** Es como una receta de cocina con 2 pasos principales.
+**Analogía:** Es como una receta de cocina con 2 pasos principales y un mesero escucha un evento cuando el platillo esta listo
 
 ---
 
