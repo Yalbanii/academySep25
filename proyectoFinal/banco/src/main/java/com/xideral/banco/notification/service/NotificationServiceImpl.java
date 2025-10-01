@@ -393,13 +393,10 @@ public class NotificationServiceImpl implements NotificationService {
     public void handleTransactionCompleted(TransactionCompletedEvent event) {
         log.debug("Handling TransactionCompletedEvent for account: {}", event.getAccountNumber());
 
-        // Extraer customerId del email (asumiendo que podemos obtenerlo)
-        // En producción, deberíamos tener el customerId en el evento
-        Long customerId = 0L; // Placeholder
+        Long customerId = event.getCustomerId();
 
         switch (event.getTransactionType()) {
             case "DEPOSIT" -> {
-                // Buscar customerId (simplificado)
                 notifyDeposit(customerId, event.getCustomerEmail(), event.getAccountNumber(), event.getAmount().toString());
             }
             case "WITHDRAWAL" -> {
@@ -416,9 +413,8 @@ public class NotificationServiceImpl implements NotificationService {
     public void handleTransferCompleted(TransferCompletedEvent event) {
         log.debug("Handling TransferCompletedEvent from {} to {}", event.getSourceAccountNumber(), event.getTargetAccountNumber());
 
-        // En producción, deberíamos buscar los customerIds
-        Long sourceCustomerId = 0L; // Placeholder
-        Long targetCustomerId = 0L; // Placeholder
+        Long sourceCustomerId = event.getSourceCustomerId();
+        Long targetCustomerId = event.getTargetCustomerId();
 
         notifyTransferSent(
                 sourceCustomerId,

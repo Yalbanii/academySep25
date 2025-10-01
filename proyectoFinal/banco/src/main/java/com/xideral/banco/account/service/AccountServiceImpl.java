@@ -212,6 +212,7 @@ public class AccountServiceImpl implements AccountService {
                     "DEPOSIT",
                     amount,
                     newBalance,
+                    customer.getId(),
                     customer.getEmail(),
                     LocalDateTime.now()
             );
@@ -264,6 +265,7 @@ public class AccountServiceImpl implements AccountService {
                     "WITHDRAWAL",
                     amount,
                     newBalance,
+                    customer.getId(),
                     customer.getEmail(),
                     LocalDateTime.now()
             );
@@ -327,7 +329,9 @@ public class AccountServiceImpl implements AccountService {
                     fromAccountNumber,
                     toAccountNumber,
                     amount,
+                    fromCustomer.getId(),
                     fromCustomer.getEmail(),
+                    toCustomer.getId(),
                     toCustomer.getEmail(),
                     LocalDateTime.now()
             );

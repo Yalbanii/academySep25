@@ -17,7 +17,9 @@ public class TransferCompletedEvent {
     private String sourceAccountNumber;
     private String targetAccountNumber;
     private BigDecimal amount;
+    private Long sourceCustomerId;
     private String sourceCustomerEmail;
+    private Long targetCustomerId;
     private String targetCustomerEmail;
     private LocalDateTime timestamp;
 }

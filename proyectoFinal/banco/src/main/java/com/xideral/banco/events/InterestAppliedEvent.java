@@ -18,6 +18,7 @@ public class InterestAppliedEvent {
     private BigDecimal interestAmount;
     private BigDecimal previousBalance;
     private BigDecimal newBalance;
+    private Long customerId;
     private String customerEmail;
     private LocalDateTime timestamp;
 }

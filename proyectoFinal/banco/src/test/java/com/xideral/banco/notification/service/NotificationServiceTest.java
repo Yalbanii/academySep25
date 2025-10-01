@@ -412,6 +412,7 @@ class NotificationServiceTest {
                 "DEPOSIT",
                 new BigDecimal("1000.00"),
                 new BigDecimal("5000.00"),
+                1L,
                 "test@example.com",
                 LocalDateTime.now()
         );
@@ -447,6 +448,7 @@ class NotificationServiceTest {
                 "WITHDRAWAL",
                 new BigDecimal("500.00"),
                 new BigDecimal("150.00"), // Low balance scenario
+                1L,
                 "test@example.com",
                 LocalDateTime.now()
         );
@@ -481,7 +483,9 @@ class NotificationServiceTest {
                 "400012345678",
                 "400087654321",
                 new BigDecimal("250.00"),
+                1L,
                 "sender@example.com",
+                2L,
                 "receiver@example.com",
                 LocalDateTime.now()
         );

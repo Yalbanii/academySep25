@@ -273,6 +273,7 @@ class TransactionLogServiceTest {
                 "DEPOSIT",
                 new BigDecimal("1000.00"),
                 new BigDecimal("5000.00"),
+                1L,
                 "test@example.com",
                 LocalDateTime.now()
         );
@@ -293,7 +294,9 @@ class TransactionLogServiceTest {
                 "400012345678",
                 "400087654321",
                 new BigDecimal("500.00"),
+                1L,
                 "sender@example.com",
+                2L,
                 "receiver@example.com",
                 LocalDateTime.now()
         );
@@ -315,6 +318,7 @@ class TransactionLogServiceTest {
                 new BigDecimal("50.00"),
                 new BigDecimal("1000.00"),
                 new BigDecimal("1050.00"),
+                1L,
                 "test@example.com",
                 LocalDateTime.now()
         );

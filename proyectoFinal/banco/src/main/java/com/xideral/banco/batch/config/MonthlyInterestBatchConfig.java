@@ -163,6 +163,7 @@ public class MonthlyInterestBatchConfig {
                                 data.getCalculatedInterest(),
                                 previousBalance,
                                 newBalance,
+                                customer.getId(),
                                 customer.getEmail(),
                                 LocalDateTime.now()
                         );

@@ -127,7 +127,7 @@ public class TransactionLogServiceImpl implements TransactionLogService {
                 .balanceAfter(event.getNewBalance())
                 .timestamp(event.getTimestamp())
                 .description(String.format("%s transaction of %s", event.getTransactionType(), event.getAmount()))
-                .customerId(0L) // Placeholder - should be extracted from event
+                .customerId(event.getCustomerId())
                 .status("SUCCESS")
                 .build();
 
@@ -146,7 +146,7 @@ public class TransactionLogServiceImpl implements TransactionLogService {
                 .amount(event.getAmount().negate())
                 .timestamp(event.getTimestamp())
                 .description(String.format("Transfer sent to %s", event.getTargetAccountNumber()))
-                .customerId(0L) // Placeholder
+                .customerId(event.getSourceCustomerId())
                 .status("SUCCESS")
                 .build();
 
@@ -160,7 +160,7 @@ public class TransactionLogServiceImpl implements TransactionLogService {
                 .amount(event.getAmount())
                 .timestamp(event.getTimestamp())
                 .description(String.format("Transfer received from %s", event.getSourceAccountNumber()))
-                .customerId(0L) // Placeholder
+                .customerId(event.getTargetCustomerId())
                 .status("SUCCESS")
                 .build();
 
@@ -179,7 +179,7 @@ public class TransactionLogServiceImpl implements TransactionLogService {
                 .balanceAfter(event.getNewBalance())
                 .timestamp(event.getTimestamp())
                 .description(String.format("Monthly interest applied: %s", event.getInterestAmount()))
-                .customerId(0L) // Placeholder
+                .customerId(event.getCustomerId())
                 .status("SUCCESS")
                 .build();
 
