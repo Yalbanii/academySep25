@@ -40,13 +40,13 @@ cd banco
 
 ```bash
 # Levantar MySQL y MongoDB
-docker-compose up -d
+docker compose up -d
 
 # Verificar que los contenedores estén corriendo
-docker-compose ps
+docker compose ps
 
 # Ver logs (opcional)
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ### 3. Configuración (Opcional)

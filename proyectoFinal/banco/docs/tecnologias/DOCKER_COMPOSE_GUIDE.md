@@ -887,7 +887,7 @@ docker compose down
 
 ### Mensaje Final
 
-> "Docker Compose no es magia, es simplemente una forma inteligente de organizar y automatizar lo que harías manualmente. Como developer, dominar esta herramienta te dará superpoderes para configurar proyectos complejos en segundos."
+> "Docker Compose no es magia, es simplemente una forma inteligente de organizar y automatizar lo que harías manualmente. Como developer, dominar esta herramienta te dará habilidades para configurar proyectos complejos en segundos."
 
 **Recuerda:**
 - No tengas miedo de experimentar (puedes borrar y reiniciar)
