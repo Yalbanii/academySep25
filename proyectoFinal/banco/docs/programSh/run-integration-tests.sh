@@ -42,13 +42,14 @@ echo ""
 
 # 1.1 Crear Cliente
 echo -n "1.1 Crear Cliente... "
+TIMESTAMP=$(date +%s)
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/api/customers \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "Juan Pérez Test",
-    "email": "juan.test@example.com",
-    "phone": "5551234567"
-  }')
+  -d "{
+    \"name\": \"Juan Pérez Test\",
+    \"email\": \"juan.test.$TIMESTAMP@example.com\",
+    \"phone\": \"5551234567\"
+  }")
 HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 check_status $HTTP_CODE
@@ -70,13 +71,32 @@ pause
 
 # 1.4 Actualizar cliente
 echo -n "1.4 Actualizar cliente... "
+TIMESTAMP=$(date +%s)
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT $BASE_URL/api/customers/$CUSTOMER_ID \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "Juan Pérez Actualizado",
-    "email": "juan.updated@example.com",
-    "phone": "5559876543"
-  }')
+  -d "{
+    \"name\": \"Juan Pérez Actualizado\",
+    \"email\": \"juan.updated.$TIMESTAMP@example.com\",
+    \"phone\": \"5559876543\"
+  }")
+check_status $HTTP_CODE
+pause
+
+# 1.5 Obtener clientes por estado ACTIVE
+echo -n "1.5 Obtener clientes por estado ACTIVE... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/api/customers/status/ACTIVE)
+check_status $HTTP_CODE
+pause
+
+# 1.6 Desactivar cliente
+echo -n "1.6 Desactivar cliente... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH $BASE_URL/api/customers/$CUSTOMER_ID/deactivate)
+check_status $HTTP_CODE
+pause
+
+# 1.7 Reactivar cliente
+echo -n "1.7 Reactivar cliente... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH $BASE_URL/api/customers/$CUSTOMER_ID/activate)
 check_status $HTTP_CODE
 pause
 
@@ -122,6 +142,36 @@ pause
 echo -n "2.3 Obtener todas las cuentas... "
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/api/accounts)
 check_status $HTTP_CODE
+pause
+
+# 2.4 Obtener cuenta por número
+echo -n "2.4 Obtener cuenta por número ($ACCOUNT_1)... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/api/accounts/number/$ACCOUNT_1)
+check_status $HTTP_CODE
+pause
+
+# 2.5 Obtener cuentas activas del cliente
+echo -n "2.5 Obtener cuentas activas del cliente... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/api/accounts/customer/$CUSTOMER_ID/active)
+check_status $HTTP_CODE
+pause
+
+# 2.6 Obtener cuentas por tipo CHECKING
+echo -n "2.6 Obtener cuentas por tipo CHECKING... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/api/accounts/type/CHECKING)
+check_status $HTTP_CODE
+pause
+
+# 2.7 Obtener cuentas por estado ACTIVE
+echo -n "2.7 Obtener cuentas por estado ACTIVE... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/api/accounts/status/ACTIVE)
+check_status $HTTP_CODE
+pause
+
+# 2.8 Contar cuentas por cliente
+echo -n "2.8 Contar cuentas del cliente... "
+COUNT=$(curl -s $BASE_URL/api/accounts/customer/$CUSTOMER_ID/count)
+echo -e "${GREEN}✅ PASS${NC} (Count: $COUNT)"
 pause
 
 echo ""
@@ -179,6 +229,41 @@ echo "   Cuenta $ACCOUNT_1: \$$BALANCE_1"
 echo "   Cuenta $ACCOUNT_2: \$$BALANCE_2"
 pause
 
+# 3.5 Intentar cerrar cuenta con balance (debe fallar)
+echo -n "3.5 Intentar cerrar cuenta con balance (debe fallar)... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH $BASE_URL/api/accounts/$ACCOUNT_1_ID/close)
+if [ $HTTP_CODE -eq 400 ]; then
+    echo -e "${GREEN}✅ PASS${NC} (Correctamente rechazado)"
+else
+    echo -e "${RED}❌ FAIL (HTTP $HTTP_CODE - debería ser 400)${NC}"
+fi
+pause
+
+# 3.6 Retirar todo el balance para poder cerrar la cuenta
+echo -n "3.6 Retirar todo el balance de cuenta CHECKING... "
+BALANCE_ACTUAL=$(curl -s $BASE_URL/api/accounts/$ACCOUNT_1_ID | jq -r '.balance')
+RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/api/accounts/withdraw \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"accountNumber\": \"$ACCOUNT_1\",
+    \"amount\": $BALANCE_ACTUAL
+  }")
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+check_status $HTTP_CODE
+pause
+
+# 3.7 Ahora sí cerrar cuenta
+echo -n "3.7 Cerrar cuenta CHECKING con balance cero... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH $BASE_URL/api/accounts/$ACCOUNT_1_ID/close)
+check_status $HTTP_CODE
+pause
+
+# 3.8 Reactivar cuenta
+echo -n "3.8 Reactivar cuenta CHECKING... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH $BASE_URL/api/accounts/$ACCOUNT_1_ID/activate)
+check_status $HTTP_CODE
+pause
+
 echo ""
 echo -e "${BLUE}=== DÍA 4: NOTIFICATION SYSTEM ===${NC}"
 echo ""
@@ -224,6 +309,30 @@ echo "4.5 Detalle de notificaciones generadas:"
 curl -s $BASE_URL/api/notifications/customer/$CUSTOMER_ID | jq -r '.[] | "   [\(.type)] \(.subject) - Status: \(.status)"'
 pause
 
+# 4.6 Obtener notificaciones ordenadas por fecha
+echo -n "4.6 Obtener notificaciones ordenadas... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/api/notifications/customer/$CUSTOMER_ID/ordered)
+check_status $HTTP_CODE
+pause
+
+# 4.7 Obtener notificaciones por cuenta
+echo -n "4.7 Obtener notificaciones por cuenta ($ACCOUNT_1)... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/api/notifications/account/$ACCOUNT_1)
+check_status $HTTP_CODE
+pause
+
+# 4.8 Obtener notificaciones por tipo y cliente
+echo -n "4.8 Obtener notificaciones DEPOSIT del cliente... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/api/notifications/customer/$CUSTOMER_ID/type/DEPOSIT)
+check_status $HTTP_CODE
+pause
+
+# 4.9 Obtener notificaciones por status y cliente
+echo -n "4.9 Obtener notificaciones SENT del cliente... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/api/notifications/customer/$CUSTOMER_ID/status/SENT)
+check_status $HTTP_CODE
+pause
+
 echo ""
 echo -e "${BLUE}=== DÍA 5: SPRING BATCH - MONTHLY INTEREST ===${NC}"
 echo ""
@@ -241,7 +350,7 @@ pause
 echo -n "5.2 Ejecutar Batch Job de Intereses... "
 BATCH_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/api/batch/monthly-interest)
 HTTP_CODE=$(echo "$BATCH_RESPONSE" | tail -n1)
-BODY=$(echo "$BATCH_RESPONSE" | head -n-1)
+BODY=$(echo "$BATCH_RESPONSE" | sed '$d')
 
 # Verificar si el batch está habilitado
 if [ $HTTP_CODE -eq 404 ]; then
@@ -308,20 +417,40 @@ echo -n "   5.5.2 GET /api/transaction-logs/account/$ACCOUNT_1... "
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/transaction-logs/account/$ACCOUNT_1")
 check_status $HTTP_CODE
 
-# 5.5.3 Transaction logs por tipo
-echo -n "   5.5.3 GET /api/transaction-logs/transaction-type/DEPOSIT... "
+# 5.5.3 Transaction logs por cuenta ordenados
+echo -n "   5.5.3 GET /api/transaction-logs/account/$ACCOUNT_1/ordered... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/transaction-logs/account/$ACCOUNT_1/ordered")
+check_status $HTTP_CODE
+
+# 5.5.4 Transaction logs por tipo
+echo -n "   5.5.4 GET /api/transaction-logs/transaction-type/DEPOSIT... "
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/transaction-logs/transaction-type/DEPOSIT")
 check_status $HTTP_CODE
 
-# 5.5.4 Contar por tipo de transacción
-echo -n "   5.5.4 GET /api/transaction-logs/count/transaction-type/TRANSFER_SENT... "
+# 5.5.5 Transaction logs por cliente
+echo -n "   5.5.5 GET /api/transaction-logs/customer/$CUSTOMER_ID... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/transaction-logs/customer/$CUSTOMER_ID")
+check_status $HTTP_CODE
+
+# 5.5.6 Transaction logs por status
+echo -n "   5.5.6 GET /api/transaction-logs/status/SUCCESS... "
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/transaction-logs/status/SUCCESS")
+check_status $HTTP_CODE
+
+# 5.5.7 Contar por tipo de transacción
+echo -n "   5.5.7 GET /api/transaction-logs/count/transaction-type/TRANSFER_SENT... "
 TRANSFER_COUNT=$(curl -s "$BASE_URL/api/transaction-logs/count/transaction-type/TRANSFER_SENT")
 echo -e "${GREEN}✅ PASS${NC} (Count: $TRANSFER_COUNT)"
 
-# 5.5.5 Contar por status
-echo -n "   5.5.5 GET /api/transaction-logs/count/status/SUCCESS... "
+# 5.5.8 Contar por status
+echo -n "   5.5.8 GET /api/transaction-logs/count/status/SUCCESS... "
 SUCCESS_COUNT=$(curl -s "$BASE_URL/api/transaction-logs/count/status/SUCCESS")
 echo -e "${GREEN}✅ PASS${NC} (Count: $SUCCESS_COUNT)"
+
+# 5.5.9 Contar por cuenta
+echo -n "   5.5.9 GET /api/transaction-logs/count/account/$ACCOUNT_1... "
+ACCOUNT_COUNT=$(curl -s "$BASE_URL/api/transaction-logs/count/account/$ACCOUNT_1")
+echo -e "${GREEN}✅ PASS${NC} (Count: $ACCOUNT_COUNT)"
 
 pause
 
