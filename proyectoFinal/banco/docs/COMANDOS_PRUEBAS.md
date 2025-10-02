@@ -811,7 +811,7 @@ curl -s http://localhost:8080/api/accounts/$SAVINGS_NUM | jq '.balance'
 
 ---
 
-## 🔍 Verificación de MongoDB
+## 🔍 Verificación de MongoDB (No aplica Día 5)
 
 ### Ver notificaciones directamente en MongoDB
 ```bash
