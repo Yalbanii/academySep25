@@ -401,7 +401,7 @@
     - [x] accountsWithInterest
     - [x] totalInterestApplied
     - [x] duration, status, errorMessage
-- [x] Guarda en collection `batch_job_execution_logs`
+- [x] Guarda en collection `batch_job_executions`
 
 ### Event Integration
 - [x] Step 2 publica `InterestAppliedEvent`

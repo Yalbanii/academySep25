@@ -91,7 +91,7 @@ public Job monthlyInterestJob() {
 │  │                                                          │  │
 │  └─────────────────────────────────────────────────────────┘  │
 │                            ↓                                   │
-│  Listener → MongoDB (batch_job_execution_logs)                │
+│  Listener → MongoDB (batch_job_executions)                     │
 └────────────────────────────────────────────────────────────────┘
                             ↓
         TransactionLogService.handleInterestApplied()
@@ -758,7 +758,7 @@ CHECKING: Balance × 0.000833333
 
 7. Resultado Final:
    ├─ MySQL: 4 balances actualizados
-   ├─ MongoDB batch_job_execution_logs: 1 log de ejecución
+   ├─ MongoDB batch_job_executions: 1 log de ejecución
    └─ MongoDB transactionLogs: 4 logs tipo INTEREST_APPLIED
 ```
 
@@ -866,7 +866,7 @@ public class BusinessInterestCalculator implements InterestCalculator {
 | **Event Listeners** | 1 (TransactionLogService) |
 | **Job Listeners** | 1 (BatchJobExecutionMongoListener) |
 | **Endpoints** | 1 (POST /api/batch/monthly-interest) |
-| **Colecciones MongoDB** | 3 (notifications, transactionLogs, batch_job_execution_logs) |
+| **Colecciones MongoDB** | 3 (notifications, transactionLogs, batch_job_executions) |
 | **Tests** | 7 tests de batch |
 | **Coverage módulo Batch** | 85% |
 
@@ -950,7 +950,7 @@ db.transactionLogs.find({transactionType: "INTEREST_APPLIED"}).count()
 # 2
 
 # Verificar MongoDB batch execution log
-db.batch_job_execution_logs.findOne({jobName: "monthlyInterestJob"})
+db.batch_job_executions.findOne({jobName: "monthlyInterestJob"})
 # {
 #   status: "COMPLETED",
 #   totalAccountsProcessed: 2,
@@ -1004,7 +1004,7 @@ docker exec -it mongodb-container mongosh \
   -u admin -p xideral4321 --authenticationDatabase admin
 
 use banco_logs
-db.batch_job_execution_logs.find().pretty()
+db.batch_job_executions.find().pretty()
 ```
 
 **Resultado:**

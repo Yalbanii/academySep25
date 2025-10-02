@@ -826,8 +826,8 @@ db.notifications.find({status: "SENT"}).count()
 db.notifications.find({type: "DEPOSIT"}).pretty()
 
 # Ver logs de batch
-db.batch_job_execution_logs.find().pretty()
-db.batch_job_execution_logs.find({status: "COMPLETED"}).count()
+db.batch_job_executions.find().pretty()
+db.batch_job_executions.find({status: "COMPLETED"}).count()
 ```
 
 ---
