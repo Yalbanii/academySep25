@@ -12,7 +12,7 @@ Se implementó completamente el sistema de **Spring Batch para procesamiento men
 
 ---
 
-## Objetivos del Día 5 (REQUERIMIENTOS.md)
+## Objetivos del Día 5 (PRD.md)
 
 Según el documento de requerimientos (líneas 119-127):
 
